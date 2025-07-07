@@ -27,7 +27,7 @@ def plotStile(**features):
         if key in stile.keys(): 
             stile[key] = value
         else:
-            print('Wrong option {0}'.fromat(key))
+            print('Wrong option {0}'.format(key))
     if type(stile['xLimBottom'])==bool or stile['xLimTop']==bool:
         del stile['xLimBottom']
         del stile['xLimTop']

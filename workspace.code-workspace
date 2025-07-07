@@ -1,0 +1,14 @@
+{
+	"folders": [],
+	"settings": {
+		"zencoder.mcpServers": {
+			"git": {
+				"command": "uvx",
+				"args": [
+					"mcp-server-git"
+				]
+			}
+		},
+		"zencoder.enableRepoIndexing": true
+	}
+}
