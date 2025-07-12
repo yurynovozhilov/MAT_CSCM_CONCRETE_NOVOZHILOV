@@ -16,9 +16,9 @@ echo "🚀 Запуск Jupyter Notebook..."
 echo "✅ Виртуальное окружение: venv312"
 echo "🐍 Python версия: $(python --version)"
 echo ""
-echo "📓 Открывается curves.ipynb..."
+echo "📓 Открывается cscm.ipynb..."
 echo "   Для остановки нажмите Ctrl+C"
 echo ""
 
-# Запускаем Jupyter с основным notebook
-jupyter notebook curves.ipynb
+# Запускаем Jupyter с CSCM keyword generator
+jupyter notebook cscm.ipynb
