@@ -1,139 +1,139 @@
-# Отчет о переводе кода на Python 3
+# Python 3 Migration Report
 
-## Обзор
-Код проекта MAT_CSCM_CONCRETE_NOVOZHILOV был успешно переведен на Python 3. Все основные модули теперь совместимы с Python 3.12.
+## Overview
+The MAT_CSCM_CONCRETE_NOVOZHILOV project code has been successfully migrated to Python 3. All main modules are now compatible with Python 3.12.
 
-## Исправленные проблемы
+## Fixed Issues
 
 ### 1. plotcurves.py
-- **Проблема**: Опечатка в методе `.fromat()` вместо `.format()`
-- **Исправление**: Заменено `'Wrong option {0}'.fromat(key)` на `'Wrong option {0}'.format(key)`
-- **Строка**: 30
+- **Problem**: Typo in `.fromat()` method instead of `.format()`
+- **Fix**: Replaced `'Wrong option {0}'.fromat(key)` with `'Wrong option {0}'.format(key)`
+- **Line**: 30
 
 ### 2. curves.ipynb
-Исправлены несколько функций для правильной работы с параметрами:
+Fixed several functions for proper parameter handling:
 
-#### Функция Q1MC
-- **Проблема**: Неправильные параметры функции и использование `Q2` вместо `Q_2`
-- **Исправление**: 
+#### Q1MC Function
+- **Problem**: Incorrect function parameters and using `Q2` instead of `Q_2`
+- **Fix**: 
   ```python
-  # Было:
+  # Before:
   def Q1MC(f_c, rev=1):
       return np.sqrt(3)*Q2(f_c,rev)/(1+Q2(f_c, rev))
   
-  # Стало:
+  # After:
   def Q1MC(f_c, I, rev=1):
       return np.sqrt(3)*Q_2(f_c,I,rev)/(1+Q_2(f_c, I, rev))
   ```
 
-#### Функция Q2MC
-- **Проблема**: Неправильные параметры функции
-- **Исправление**:
+#### Q2MC Function
+- **Problem**: Incorrect function parameters
+- **Fix**:
   ```python
-  # Было:
+  # Before:
   def Q2MC(f_c, rev=1):
       return TXE(f_c, rev=1)/TXC(f_c, rev=1)
   
-  # Стало:
+  # After:
   def Q2MC(f_c, I, rev=1):
       return TXE(f_c, I, rev)/TXC(f_c, I, rev)
   ```
 
-#### Функция Q1WW
-- **Проблема**: Неправильные параметры функции и использование `Q2` вместо `Q_2`
-- **Исправление**:
+#### Q1WW Function
+- **Problem**: Incorrect function parameters and using `Q2` instead of `Q_2`
+- **Fix**:
   ```python
-  # Было:
+  # Before:
   def Q1WW(f_c, rev=1):
       q=(1-pow(Q2(f_c, rev),2))
       return (np.sqrt(3)*q+(2*Q2(f_c, rev)-1)*np.sqrt((3*q)+5*pow(Q2(f_c, rev),2)-4*Q2(f_c, rev)))/(3*q+pow(1-2*Q2(f_c, rev),2))
   
-  # Стало:
+  # After:
   def Q1WW(f_c, I, rev=1):
       q=(1-pow(Q_2(f_c, I, rev),2))
       return (np.sqrt(3)*q+(2*Q_2(f_c, I, rev)-1)*np.sqrt((3*q)+5*pow(Q_2(f_c, I, rev),2)-4*Q_2(f_c, I, rev)))/(3*q+pow(1-2*Q_2(f_c, I, rev),2))
   ```
 
-#### Функции TORMC, TXEMC, TORWW
-- **Проблема**: Неправильная передача параметров в вызовах функций
-- **Исправление**: Исправлены вызовы функций для правильной передачи параметра `J` (или `I`)
+#### TORMC, TXEMC, TORWW Functions
+- **Problem**: Incorrect parameter passing in function calls
+- **Fix**: Fixed function calls for proper `J` (or `I`) parameter passing
 
-## Проверенные модули
+## Tested Modules
 
-### Основные модули (полностью совместимы с Python 3):
-- ✅ `CEB.py` - Модель CEB-FIP для свойств бетона
-- ✅ `CapModel.py` - Модель поверхности текучести CSCM
-- ✅ `plotcurves.py` - Утилиты для построения графиков
-- ✅ `d3py.py` - Функции для 3D визуализации и генерации CSCM
-- ✅ `transformation.py` - Утилиты преобразования координат
-- ✅ `curves.ipynb` - Jupyter notebook (исправлены функции)
+### Main modules (fully compatible with Python 3):
+- ✅ `CEB.py` - CEB-FIP model for concrete properties
+- ✅ `CapModel.py` - CSCM yield surface model
+- ✅ `plotcurves.py` - Plotting utilities
+- ✅ `d3py.py` - 3D visualization and CSCM generation functions
+- ✅ `transformation.py` - Coordinate transformation utilities
+- ✅ `curves.ipynb` - Jupyter notebook (functions fixed)
 
-### Архивные файлы (не исправлялись):
-- `arc/` - Содержит старые версии кода с синтаксисом Python 2
-  - Используют `print` как оператор вместо функции
-  - Используют `xrange` вместо `range`
-  - Эти файлы не являются частью основного функционала
+### Archive files (not fixed):
+- `arc/` - Contains old code versions with Python 2 syntax
+  - Use `print` as statement instead of function
+  - Use `xrange` instead of `range`
+  - These files are not part of the main functionality
 
-## Результаты тестирования
+## Testing Results
 
-Все основные модули успешно протестированы в виртуальном окружении Python 3.12:
+All main modules have been successfully tested in Python 3.12 virtual environment:
 
 ```bash
-# Активация виртуального окружения
+# Activate virtual environment
 source venv312/bin/activate
 
-# Тестирование основных функций
-✅ CEB модуль - импорт и основные функции работают
-✅ CapModel модуль - импорт и основные функции работают  
-✅ plotcurves модуль - импорт и основные функции работают
-✅ d3py модуль - импорт и функция CSCM работают
-✅ Исправленные функции notebook - работают корректно
+# Test main functions
+✅ CEB module - import and main functions work
+✅ CapModel module - import and main functions work  
+✅ plotcurves module - import and main functions work
+✅ d3py module - import and CSCM function work
+✅ Fixed notebook functions - work correctly
 ```
 
-## Рекомендации
+## Recommendations
 
-1. **Использование виртуального окружения**: Всегда активируйте `venv312` перед работой с проектом:
+1. **Virtual environment usage**: Always activate `venv312` before working with the project:
    ```bash
    source venv312/bin/activate
    ```
 
-2. **Jupyter Notebook**: Для работы с `curves.ipynb` используйте:
+2. **Jupyter Notebook**: To work with `curves.ipynb` use:
    ```bash
    source venv312/bin/activate
    jupyter notebook curves.ipynb
    ```
 
-3. **Архивные файлы**: Файлы в папке `arc/` содержат старый код Python 2 и не рекомендуются к использованию.
+3. **Archive files**: Files in `arc/` folder contain old Python 2 code and are not recommended for use.
 
 ### 3. transformation.py
-- **Проблема**: Неопределенная переменная `theta` вместо `angle`
-- **Исправление**: Заменено `np.deg2rad(theta)` на `np.deg2rad(angle)`
-- **Строка**: 9
+- **Problem**: Undefined variable `theta` instead of `angle`
+- **Fix**: Replaced `np.deg2rad(theta)` with `np.deg2rad(angle)`
+- **Line**: 9
 
-### 4. Зависимости
-- **Добавлено**: `pyquaternion` для модуля `transformation.py`
+### 4. Dependencies
+- **Added**: `pyquaternion` for `transformation.py` module
 
-## Созданные вспомогательные файлы
+## Created Helper Files
 
-### Скрипты автоматизации:
-- ✅ `activate.sh` - Автоматическая активация виртуального окружения
-- ✅ `run_jupyter.sh` - Запуск Jupyter Notebook с правильным окружением  
-- ✅ `test_modules.py` - Комплексное тестирование всех модулей
+### Automation scripts:
+- ✅ `activate.sh` - Automatic virtual environment activation
+- ✅ `run_jupyter.sh` - Launch Jupyter Notebook with correct environment  
+- ✅ `test_modules.py` - Comprehensive testing of all modules
 
-### Настройки VS Code:
-- ✅ `.vscode/settings.json` - Автоматический выбор интерпретатора Python из `venv312`
+### VS Code settings:
+- ✅ `.vscode/settings.json` - Automatic Python interpreter selection from `venv312`
 
-### Документация:
-- ✅ `README.md` - Обновленные инструкции по использованию
+### Documentation:
+- ✅ `README.md` - Updated usage instructions
 
-## Заключение
+## Conclusion
 
-Проект успешно переведен на Python 3 и настроен для удобного использования:
+The project has been successfully migrated to Python 3 and configured for convenient use:
 
-🎯 **Все модули работают с Python 3.12**  
-🔧 **Автоматическое использование venv312**  
-📝 **Полная документация и инструкции**  
-🧪 **Комплексное тестирование**  
-⚙️ **Настройка IDE**  
+🎯 **All modules work with Python 3.12**  
+🔧 **Automatic venv312 usage**  
+📝 **Complete documentation and instructions**  
+🧪 **Comprehensive testing**  
+⚙️ **IDE configuration**  
 
-Проект готов к использованию в современной среде Python 3.12!
+The project is ready for use in modern Python 3.12 environment!

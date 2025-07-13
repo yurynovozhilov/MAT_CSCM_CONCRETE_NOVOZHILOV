@@ -1,24 +1,24 @@
 #!/bin/bash
-# Скрипт для запуска Jupyter Notebook с правильным виртуальным окружением
-# Использование: ./run_jupyter.sh
+# Script to launch Jupyter Notebook with correct virtual environment
+# Usage: ./run_jupyter.sh
 
-# Проверяем, что мы в правильной директории
+# Check that we are in the correct directory
 if [ ! -d "venv312" ]; then
-    echo "❌ Ошибка: Директория venv312 не найдена!"
-    echo "   Убедитесь, что вы находитесь в корневой директории проекта"
+    echo "❌ Error: venv312 directory not found!"
+    echo "   Make sure you are in the project root directory"
     exit 1
 fi
 
-# Активируем виртуальное окружение
+# Activate virtual environment
 source venv312/bin/activate
 
-echo "🚀 Запуск Jupyter Notebook..."
-echo "✅ Виртуальное окружение: venv312"
-echo "🐍 Python версия: $(python --version)"
+echo "🚀 Starting Jupyter Notebook..."
+echo "✅ Virtual environment: venv312"
+echo "🐍 Python version: $(python --version)"
 echo ""
-echo "📓 Открывается cscm.ipynb..."
-echo "   Для остановки нажмите Ctrl+C"
+echo "📓 Opening cscm.ipynb..."
+echo "   Press Ctrl+C to stop"
 echo ""
 
-# Запускаем Jupyter с CSCM keyword generator
+# Launch Jupyter with CSCM keyword generator
 jupyter notebook cscm.ipynb

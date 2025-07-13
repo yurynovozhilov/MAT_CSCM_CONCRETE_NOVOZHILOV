@@ -1,23 +1,23 @@
 #!/bin/bash
-# Скрипт для активации виртуального окружения проекта
-# Использование: source activate.sh
+# Script for activating project virtual environment
+# Usage: source activate.sh
 
-# Проверяем, что мы в правильной директории
+# Check that we are in the correct directory
 if [ ! -d "venv312" ]; then
-    echo "Ошибка: Директория venv312 не найдена!"
-    echo "Убедитесь, что вы находитесь в корневой директории проекта MAT_CSCM_CONCRETE_NOVOZHILOV"
+    echo "Error: venv312 directory not found!"
+    echo "Make sure you are in the MAT_CSCM_CONCRETE_NOVOZHILOV project root directory"
     return 1
 fi
 
-# Активируем виртуальное окружение
+# Activate virtual environment
 source venv312/bin/activate
 
-echo "✅ Виртуальное окружение venv312 активировано"
-echo "Python версия: $(python --version)"
-echo "Путь к Python: $(which python)"
+echo "✅ Virtual environment venv312 activated"
+echo "Python version: $(python --version)"
+echo "Python path: $(which python)"
 echo ""
-echo "Доступные команды:"
-echo "  jupyter notebook cscm.ipynb    - запуск CSCM keyword generator"
-echo "  jupyter notebook curves.ipynb  - запуск полного notebook с кривыми"
-echo "  python test_modules.py         - тестирование модулей"
-echo "  deactivate                     - деактивация окружения"
+echo "Available commands:"
+echo "  jupyter notebook cscm.ipynb    - launch CSCM keyword generator"
+echo "  jupyter notebook curves.ipynb  - launch full notebook with curves"
+echo "  python test_modules.py         - test modules"
+echo "  deactivate                     - deactivate environment"

@@ -2,65 +2,65 @@
 
 Continuous Surface Cap Model (CSCM) for concrete material behavior simulation.
 
-## 🚀 Быстрый старт
+## 🚀 Quick Start
 
-### Активация виртуального окружения
+### Virtual Environment Activation
 ```bash
-# Активация окружения (обязательно!)
+# Activate environment (required!)
 source activate.sh
 ```
 
-### Запуск основного notebook
+### Launch Main Notebook
 ```bash
-# Запуск Jupyter Notebook
+# Start Jupyter Notebook
 ./run_jupyter.sh
 ```
 
-### Тестирование модулей
+### Module Testing
 ```bash
-# Проверка всех модулей
+# Test all modules
 python test_modules.py
 ```
 
-## 📋 Требования
+## 📋 Requirements
 
-- Python 3.12 (используется виртуальное окружение `venv312`)
-- Все зависимости установлены в `venv312`
+- Python 3.12 (uses virtual environment `venv312`)
+- All dependencies installed in `venv312`
 
-## 🔧 Настройка VS Code
+## 🔧 VS Code Setup
 
-VS Code автоматически настроен для использования правильного интерпретатора Python из `venv312`. Настройки находятся в `.vscode/settings.json`.
+VS Code is automatically configured to use the correct Python interpreter from `venv312`. Settings are located in `.vscode/settings.json`.
 
-## 📁 Структура проекта
+## 📁 Project Structure
 
-### Основные модули (Python 3 совместимые):
-- `CEB.py` - Модель CEB-FIP для свойств бетона
-- `CapModel.py` - Модель поверхности текучести CSCM  
-- `plotcurves.py` - Утилиты для построения графиков
-- `d3py.py` - Функции для 3D визуализации и генерации CSCM
-- `transformation.py` - Утилиты преобразования координат
-- `curves.ipynb` - Основной Jupyter notebook
+### Main modules (Python 3 compatible):
+- `CEB.py` - CEB-FIP model for concrete properties
+- `CapModel.py` - CSCM yield surface model  
+- `plotcurves.py` - Plotting utilities
+- `d3py.py` - 3D visualization and CSCM generation functions
+- `transformation.py` - Coordinate transformation utilities
+- `curves.ipynb` - Main Jupyter notebook
 
-### Вспомогательные файлы:
-- `activate.sh` - Скрипт активации окружения
-- `run_jupyter.sh` - Скрипт запуска Jupyter
-- `test_modules.py` - Скрипт тестирования модулей
+### Helper files:
+- `activate.sh` - Environment activation script
+- `run_jupyter.sh` - Jupyter launch script
+- `test_modules.py` - Module testing script
 
-### Архивные файлы:
-- `arc/` - Старые версии кода (Python 2, не используются)
+### Archive files:
+- `arc/` - Old code versions (Python 2, not used)
 
-## ⚠️ Важно
+## ⚠️ Important
 
-**Всегда используйте виртуальное окружение `venv312`!**
+**Always use the `venv312` virtual environment!**
 
-Все команды должны выполняться после активации окружения:
+All commands should be executed after environment activation:
 ```bash
 source activate.sh
 ```
 
-## 📊 Статус совместимости
+## 📊 Compatibility Status
 
-✅ **Python 3.12** - Полная совместимость  
-✅ **Все основные модули** - Протестированы и работают  
-✅ **Jupyter Notebook** - Исправлены функции, готов к использованию  
-✅ **VS Code** - Настроен автоматический выбор интерпретатора
+✅ **Python 3.12** - Full compatibility  
+✅ **All main modules** - Tested and working  
+✅ **Jupyter Notebook** - Functions fixed, ready to use  
+✅ **VS Code** - Automatic interpreter selection configured

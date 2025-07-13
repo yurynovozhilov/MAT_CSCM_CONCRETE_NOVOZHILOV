@@ -475,7 +475,7 @@ def CDPM(
     if damage_type == 'lin': 
         wf = data['WF']*2
         damage_type = 0.0
-    # нужна проверка wf1 ft1
+    # need to check wf1 ft1
     elif damage_type == 'bi': 
         wf = data['WF']*4.444
         damage_type = 1.0
