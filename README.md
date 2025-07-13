@@ -2,6 +2,17 @@
 
 Continuous Surface Cap Model (CSCM) for concrete material behavior simulation.
 
+**This code was developed during the research for the scientific article:**
+*"Precise Calibration of the Continuous Surface Cap Model for Concrete Simulation"* published in Buildings journal (2022).
+
+## 🌐 Try Online with Binder
+
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/yurynovozhilov/MAT_CSCM_CONCRETE_NOVOZHILOV/HEAD?filepath=curves.ipynb)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Citation](https://img.shields.io/badge/Citation-Required-red.svg)](CITATION.md)
+
+Launch the interactive Jupyter notebook directly in your browser without any installation!
+
 ## 🚀 Quick Start
 
 ### Virtual Environment Activation
@@ -64,3 +75,53 @@ source activate.sh
 ✅ **All main modules** - Tested and working  
 ✅ **Jupyter Notebook** - Functions fixed, ready to use  
 ✅ **VS Code** - Automatic interpreter selection configured
+
+## 📄 License & Citation
+
+This project is licensed under the MIT License with Citation Requirement - see the [LICENSE](LICENSE) file for details.
+
+### 📚 How to Cite
+
+If you use this software in your research or commercial applications, please cite both the scientific article and the software:
+
+**Primary Citation (Scientific Article):**
+```bibtex
+@article{novozhilov2022precise,
+  title={Precise Calibration of the Continuous Surface Cap Model for Concrete Simulation},
+  author={Novozhilov, Yury Vladislavovich and Dmitriev, Andrey Nikolaevich and Mikhaluk, Dmitry Sergeevich},
+  journal={Buildings},
+  volume={12},
+  number={5},
+  pages={636},
+  year={2022},
+  publisher={MDPI},
+  doi={10.3390/buildings12050636}
+}
+```
+
+**Secondary Citation (Software):**
+```bibtex
+@software{novozhilov2025cscm,
+  author = {Novozhilov, Yury},
+  title = {MAT_CSCM_CONCRETE_NOVOZHILOV: Continuous Surface Cap Model for Concrete Material Behavior Simulation},
+  url = {https://github.com/yurynovozhilov/MAT_CSCM_CONCRETE_NOVOZHILOV},
+  version = {1.0.0},
+  year = {2025}
+}
+```
+
+**Plain text citations:**
+1. Novozhilov, Y.V.; Dmitriev, A.N.; Mikhaluk, D.S. Precise Calibration of the Continuous Surface Cap Model for Concrete Simulation. Buildings 2022, 12, 636. https://doi.org/10.3390/buildings12050636
+2. Novozhilov, Y. (2025). MAT_CSCM_CONCRETE_NOVOZHILOV: Continuous Surface Cap Model for Concrete Material Behavior Simulation. GitHub repository. https://github.com/yurynovozhilov/MAT_CSCM_CONCRETE_NOVOZHILOV
+
+### ✅ Usage Rights
+
+- ✅ **Commercial use** - You can use this software for commercial purposes
+- ✅ **Modification** - You can modify and adapt the code
+- ✅ **Distribution** - You can distribute original or modified versions
+- ✅ **Private use** - You can use this software privately
+- ⚠️ **Citation required** - You must cite both the scientific article and the software in any publications or applications
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.

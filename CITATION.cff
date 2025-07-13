@@ -1,0 +1,45 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite both the software and the related scientific publication."
+type: software
+title: "MAT_CSCM_CONCRETE_NOVOZHILOV: Continuous Surface Cap Model for Concrete Material Behavior Simulation"
+authors:
+  - family-names: "Novozhilov"
+    given-names: "Yury Vladislavovich"
+    orcid: "https://orcid.org/0000-0000-0000-0000"  # Replace with your actual ORCID if available
+  - family-names: "Dmitriev"
+    given-names: "Andrey Nikolaevich"
+  - family-names: "Mikhaluk"
+    given-names: "Dmitry Sergeevich"
+repository-code: "https://github.com/yurynovozhilov/MAT_CSCM_CONCRETE_NOVOZHILOV"
+url: "https://github.com/yurynovozhilov/MAT_CSCM_CONCRETE_NOVOZHILOV"
+abstract: "Implementation of Continuous Surface Cap Model (CSCM) for concrete material behavior simulation. This code was developed during the research for the scientific article 'Precise Calibration of the Continuous Surface Cap Model for Concrete Simulation' published in Buildings journal (2022). Provides tools for calculating and visualizing concrete material properties, stress-strain relationships, and dynamic increase factors (DIF) based on various models including CEB-FIP and Malvar & Ross formulations."
+keywords:
+  - "concrete modeling"
+  - "CSCM"
+  - "material behavior"
+  - "stress-strain"
+  - "dynamic increase factor"
+  - "CEB-FIP"
+  - "computational mechanics"
+license: "MIT"
+version: "1.0.0"
+date-released: "2025-01-27"
+references:
+  - type: article
+    title: "Precise Calibration of the Continuous Surface Cap Model for Concrete Simulation"
+    authors:
+      - family-names: "Novozhilov"
+        given-names: "Yury Vladislavovich"
+      - family-names: "Dmitriev"
+        given-names: "Andrey Nikolaevich"
+      - family-names: "Mikhaluk"
+        given-names: "Dmitry Sergeevich"
+    journal: "Buildings"
+    volume: 12
+    issue: 5
+    pages: 636
+    year: 2022
+    publisher:
+      name: "MDPI"
+    doi: "10.3390/buildings12050636"
+    url: "https://doi.org/10.3390/buildings12050636"

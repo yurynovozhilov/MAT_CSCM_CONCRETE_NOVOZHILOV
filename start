@@ -1,0 +1,8 @@
+#!/bin/bash
+
+# Test imports first
+echo "Testing module imports..."
+python test_binder.py
+
+# Start Jupyter Lab
+exec "$@"

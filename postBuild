@@ -1,0 +1,10 @@
+#!/bin/bash
+
+# Enable Jupyter widgets extension
+jupyter nbextension enable --py widgetsnbextension --sys-prefix
+
+# Enable JupyterLab widgets extension
+jupyter labextension install @jupyter-widgets/jupyterlab-manager --no-build
+
+# Build JupyterLab
+jupyter lab build --dev-build=False --minimize=True

@@ -1,0 +1,4 @@
+# System packages for matplotlib and other dependencies
+libfreetype6-dev
+libpng-dev
+pkg-config

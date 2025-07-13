@@ -1,0 +1,15 @@
+name: cscm-concrete
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.12
+  - numpy>=2.0.0
+  - matplotlib>=3.5.0
+  - jupyter>=1.0.0
+  - jupyterlab>=4.0.0
+  - notebook>=7.0.0
+  - ipywidgets>=8.0.0
+  - pip
+  - pip:
+    - ipywidgets
