@@ -6,14 +6,14 @@ This repository is configured to work with [mybinder.org](https://mybinder.org) 
 
 Click the badge below to launch the interactive environment:
 
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/yurynovozhilov/MAT_CSCM_CONCRETE_NOVOZHILOV/HEAD?filepath=curves.ipynb)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/yurynovozhilov/MAT_CSCM_CONCRETE_NOVOZHILOV/HEAD?filepath=cscm.ipynb)
 
 ## 📋 What's Included
 
 The Binder environment includes:
 - Python 3.12 runtime
 - All necessary dependencies (numpy, matplotlib, jupyter, ipywidgets)
-- Main notebook: `curves.ipynb`
+- Main notebook: `cscm.ipynb`
 - All Python modules: `CEB.py`, `CapModel.py`, `plotcurves.py`, `d3py.py`
 - Experimental data files in `data/` directory
 
@@ -28,7 +28,7 @@ The Binder environment includes:
 
 1. Click the Binder badge above
 2. Wait for the environment to build (first time may take a few minutes)
-3. The `curves.ipynb` notebook will open automatically
+3. The `cscm.ipynb` notebook will open automatically
 4. Run cells to generate concrete material curves and visualizations
 
 ## 🔄 Updating

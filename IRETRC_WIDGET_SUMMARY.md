@@ -11,7 +11,7 @@
 - ✅ Добавлен обработчик событий `iretrc_widget.observe(update_output, names='value')`
 - ✅ Добавлен виджет в `widgets.VBox` для отображения
 
-### 2. Файл `curves.ipynb`
+### 2. Файл `cscm.ipynb`
 - ✅ Добавлен виджет `iretrc_widget` с выпадающим списком
 - ✅ Добавлена переменная `iretrc = iretrc_widget.value` в функцию `update_output`
 - ✅ Добавлен параметр `itretrc = iretrc` в вызов функции `CSCM()`

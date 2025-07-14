@@ -4,7 +4,7 @@
 
 **Прямая ссылка для запуска notebook:**
 ```
-https://mybinder.org/v2/gh/yurynovozhilov/MAT_CSCM_CONCRETE_NOVOZHILOV/HEAD?filepath=curves.ipynb
+https://mybinder.org/v2/gh/yurynovozhilov/MAT_CSCM_CONCRETE_NOVOZHILOV/HEAD?filepath=cscm.ipynb
 ```
 
 ## 📋 Что нужно сделать сейчас
@@ -20,7 +20,7 @@ git push
 После загрузки на GitHub:
 1. Перейдите по ссылке выше
 2. Дождитесь сборки окружения (5-10 минут в первый раз)
-3. Notebook `curves.ipynb` откроется автоматически
+3. Notebook `cscm.ipynb` откроется автоматически
 
 ## ✅ Что работает
 

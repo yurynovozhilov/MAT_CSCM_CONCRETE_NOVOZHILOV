@@ -7,7 +7,7 @@ Continuous Surface Cap Model (CSCM) for concrete material behavior simulation.
 
 ## 🌐 Try Online with Binder
 
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/yurynovozhilov/MAT_CSCM_CONCRETE_NOVOZHILOV/HEAD?filepath=curves.ipynb)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/yurynovozhilov/MAT_CSCM_CONCRETE_NOVOZHILOV/HEAD?filepath=cscm.ipynb)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Citation](https://img.shields.io/badge/Citation-Required-red.svg)](CITATION.md)
 
@@ -50,7 +50,7 @@ VS Code is automatically configured to use the correct Python interpreter from `
 - `plotcurves.py` - Plotting utilities
 - `d3py.py` - 3D visualization and CSCM generation functions
 - `transformation.py` - Coordinate transformation utilities
-- `curves.ipynb` - Main Jupyter notebook
+- `cscm.ipynb` - Main Jupyter notebook
 
 ### Helper files:
 - `activate.sh` - Environment activation script

@@ -16,7 +16,7 @@
 
 ## 🎯 Готово к использованию
 
-Ваш notebook `curves.ipynb` готов для запуска на Binder со всеми модулями:
+Ваш notebook `cscm.ipynb` готов для запуска на Binder со всеми модулями:
 - ✅ CEB.py
 - ✅ CapModel.py  
 - ✅ plotcurves.py
@@ -43,7 +43,7 @@ git push
 После загрузки на GitHub используйте готовую ссылку:
 
 ```
-https://mybinder.org/v2/gh/yurynovozhilov/MAT_CSCM_CONCRETE_NOVOZHILOV/HEAD?filepath=curves.ipynb
+https://mybinder.org/v2/gh/yurynovozhilov/MAT_CSCM_CONCRETE_NOVOZHILOV/HEAD?filepath=cscm.ipynb
 ```
 
 ## 📊 Результат

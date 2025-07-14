@@ -28,19 +28,19 @@ git push -u origin main
 ### 2. README.md обновлен
 Badge уже настроен с вашим GitHub username:
 ```markdown
-[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/yurynovozhilov/MAT_CSCM_CONCRETE_NOVOZHILOV/HEAD?filepath=curves.ipynb)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/yurynovozhilov/MAT_CSCM_CONCRETE_NOVOZHILOV/HEAD?filepath=cscm.ipynb)
 ```
 
 ### 3. Тестирование Binder
 1. Перейдите на https://mybinder.org
 2. Вставьте URL вашего GitHub репозитория
-3. Укажите `curves.ipynb` как файл для открытия
+3. Укажите `cscm.ipynb` как файл для открытия
 4. Нажмите "Launch"
 
 ## 🎯 Ожидаемый результат
 
 После запуска Binder:
-- Автоматически откроется `curves.ipynb`
+- Автоматически откроется `cscm.ipynb`
 - Все модули (`CEB.py`, `CapModel.py`, `plotcurves.py`, `d3py.py`) будут доступны
 - Данные в папке `data/` будут загружены
 - Интерактивные виджеты будут работать

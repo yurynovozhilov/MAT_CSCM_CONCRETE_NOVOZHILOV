@@ -10,7 +10,7 @@ The MAT_CSCM_CONCRETE_NOVOZHILOV project code has been successfully migrated to 
 - **Fix**: Replaced `'Wrong option {0}'.fromat(key)` with `'Wrong option {0}'.format(key)`
 - **Line**: 30
 
-### 2. curves.ipynb
+### 2. cscm.ipynb
 Fixed several functions for proper parameter handling:
 
 #### Q1MC Function
@@ -66,7 +66,7 @@ Fixed several functions for proper parameter handling:
 - ✅ `plotcurves.py` - Plotting utilities
 - ✅ `d3py.py` - 3D visualization and CSCM generation functions
 - ✅ `transformation.py` - Coordinate transformation utilities
-- ✅ `curves.ipynb` - Jupyter notebook (functions fixed)
+- ✅ `cscm.ipynb` - Jupyter notebook (functions fixed)
 
 ### Archive files (not fixed):
 - `arc/` - Contains old code versions with Python 2 syntax
@@ -97,10 +97,10 @@ source venv312/bin/activate
    source venv312/bin/activate
    ```
 
-2. **Jupyter Notebook**: To work with `curves.ipynb` use:
+2. **Jupyter Notebook**: To work with `cscm.ipynb` use:
    ```bash
    source venv312/bin/activate
-   jupyter notebook curves.ipynb
+   jupyter notebook cscm.ipynb
    ```
 
 3. **Archive files**: Files in `arc/` folder contain old Python 2 code and are not recommended for use.
