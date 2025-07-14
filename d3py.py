@@ -47,7 +47,7 @@ def CSCM(
         recov = 1-float(recov)
     #
     data = CEB(f_c = f_c, d_max = dmax)
-    CSCM = OD()
+    CSCM = {}
     CSCM['NAME']    = '*MAT_CSCM'
     #
     CSCM['MID']     = {'card':1, 'position':1, 'type':'A8', 'value':mid}

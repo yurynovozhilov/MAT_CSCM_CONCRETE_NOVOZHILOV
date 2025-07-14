@@ -29,7 +29,6 @@ def test_imports():
     modules_to_test = [
         ('numpy', 'np'),
         ('matplotlib.pyplot', 'plt'),
-        ('collections', None),
         ('CEB', None),
         ('CapModel', None),
         ('plotcurves', None),

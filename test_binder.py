@@ -13,7 +13,7 @@ def test_imports():
         import matplotlib.pyplot as plt
         import ipywidgets as widgets
         from IPython.display import display
-        from collections import OrderedDict as OD
+
         print("✅ Basic libraries imported successfully")
     except ImportError as e:
         print(f"❌ Error importing basic libraries: {e}")

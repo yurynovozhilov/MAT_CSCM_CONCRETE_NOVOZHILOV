@@ -1,5 +1,4 @@
 import numpy as np
-from collections import OrderedDict as OD
 
 def DIF_c(f_c):
     f_co = 10
@@ -251,7 +250,7 @@ def CEB(f_c = 40, d_max = 16.0, rho = 2.4E-9, curve_array_size = 100, delta_f = 
     
     ################################################
     # Record data from CEB-FIB estimations
-    data = OD()
+    data = {}
     data['f_c']   = f_c  
     data['f_cm0'] = f_cm0  
     data['f_cm']  = f_cm 
