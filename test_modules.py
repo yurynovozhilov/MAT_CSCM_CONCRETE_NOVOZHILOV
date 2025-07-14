@@ -59,7 +59,7 @@ def test_basic_functionality():
         import numpy as np
         from CEB import CEB, DIF_c, DIF_t
         from CapModel import alpha, lamda, Q_2, TXC, TXE
-        from d3py import CSCM
+        from MatCSCM import MatCSCM
         
         # Test CEB module
         f_c = 40.0
@@ -83,9 +83,10 @@ def test_basic_functionality():
         txe_vals = TXE(f_c, I, rev=1)
         print(f"✅ Array functions: Q_2 shape={q2_vals.shape}")
         
-        # Test CSCM
-        cscm_data = CSCM(f_c=f_c)
-        print(f"✅ CSCM: MID={cscm_data['MID']['value']}")
+        # Test MatCSCM
+        mat_cscm = MatCSCM(f_c=f_c)
+        cscm_data = mat_cscm.generate_keyword()
+        print(f"✅ MatCSCM: MID={cscm_data['MID']['value']}")
         
         return True
         
