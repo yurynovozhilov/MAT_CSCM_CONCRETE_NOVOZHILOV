@@ -13,6 +13,17 @@ Continuous Surface Cap Model (CSCM) for concrete material behavior simulation.
 
 Launch the interactive Jupyter notebook directly in your browser without any installation!
 
+### 🔧 Binder Environment
+The online environment includes:
+- Python 3.12 runtime with all dependencies
+- Interactive widgets for parameter adjustment
+- All experimental data files
+- Automatic notebook launch (`cscm.ipynb`)
+
+**First launch may take 5-10 minutes to build. Subsequent launches are much faster.**
+
+For detailed Binder setup information, see [docs/BINDER_SETUP.md](docs/BINDER_SETUP.md).
+
 ## 🚀 Quick Start
 
 ### Virtual Environment Activation
@@ -75,6 +86,8 @@ source activate.sh
 ✅ **All main modules** - Tested and working  
 ✅ **Jupyter Notebook** - Functions fixed, ready to use  
 ✅ **VS Code** - Automatic interpreter selection configured
+
+For detailed migration history and fixes, see [docs/MIGRATION_HISTORY.md](docs/MIGRATION_HISTORY.md).
 
 ## 📄 License & Citation
 
