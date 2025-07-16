@@ -7,7 +7,7 @@ CSCM material keywords for LS-DYNA.
 """
 
 import numpy as np
-from MatCSCM import MatCSCM, keyword_to_text
+from MatCSCM import MatCSCM, keyword_to_text, Revision
 
 
 def main():
@@ -28,25 +28,25 @@ def main():
     
     # Access nested class methods
     print("\nAccessing yield surface parameters:")
-    print(f"Alpha (rev=2): {mat.yield_surface.alpha(2):.6f}")
-    print(f"Lambda (rev=2): {mat.yield_surface.lamda(2):.6f}")
-    print(f"Beta (rev=2): {mat.yield_surface.beta(2):.6f}")
-    print(f"Theta (rev=2): {mat.yield_surface.theta(2):.6f}")
+    print(f"Alpha (rev=2): {mat.yield_surface.alpha(Revision.REV_2):.6f}")
+    print(f"Lambda (rev=2): {mat.yield_surface.lamda(Revision.REV_2):.6f}")
+    print(f"Beta (rev=2): {mat.yield_surface.beta(Revision.REV_2):.6f}")
+    print(f"Theta (rev=2): {mat.yield_surface.theta(Revision.REV_2):.6f}")
     
     print("\nAccessing cap surface parameters:")
-    print(f"X0 (rev=2): {mat.cap_surface.X0(2):.6f}")
-    print(f"R (rev=2): {mat.cap_surface.R(2):.6f}")
-    print(f"W (rev=2): {mat.cap_surface.W(2):.6f}")
+    print(f"X0 (rev=2): {mat.cap_surface.X0(Revision.REV_2):.6f}")
+    print(f"R (rev=2): {mat.cap_surface.R(Revision.REV_2):.6f}")
+    print(f"W (rev=2): {mat.cap_surface.W(Revision.REV_2):.6f}")
     
     print("\nAccessing damage parameters:")
-    print(f"B (rev=1): {mat.damage.B(1):.6f}")
-    print(f"D (rev=1): {mat.damage.D(1):.6f}")
+    print(f"B (rev=1): {mat.damage.B(Revision.REV_1):.6f}")
+    print(f"D (rev=1): {mat.damage.D(Revision.REV_1):.6f}")
     
     print("\nAccessing strain rate parameters:")
-    print(f"n_t (rev=1): {mat.strain_rate.n_t(1):.6f}")
-    print(f"n_c (rev=1): {mat.strain_rate.n_c(1):.6f}")
-    print(f"eta_0_t (rev=1): {mat.strain_rate.eta_0_t(1):.6e}")
-    print(f"eta_0_c (rev=1): {mat.strain_rate.eta_0_c(1):.6e}")
+    print(f"n_t (rev=1): {mat.strain_rate.n_t(Revision.REV_1):.6f}")
+    print(f"n_c (rev=1): {mat.strain_rate.n_c(Revision.REV_1):.6f}")
+    print(f"eta_0_t (rev=1): {mat.strain_rate.eta_0_t(Revision.REV_1):.6e}")
+    print(f"eta_0_c (rev=1): {mat.strain_rate.eta_0_c(Revision.REV_1):.6e}")
     
     # Generate LS-DYNA keyword
     print("\nGenerating LS-DYNA keyword...")
@@ -69,12 +69,12 @@ def main():
     I_values = np.array([-10, 0, 10, 20, 30])  # First stress invariant values
     
     print("I values:", I_values)
-    print("TXC values:", mat.yield_surface.TXC(I_values, rev=2))
+    print("TXC values:", mat.yield_surface.TXC(I_values, rev=Revision.REV_2))
     
     # Calculate DIF curves
     print("\nCalculating Dynamic Increase Factors:")
-    dif_t = mat.strain_rate.DIF_CSCM_t(rev=1, strain_rate_max=100)
-    dif_c = mat.strain_rate.DIF_CSCM_c(rev=1, strain_rate_max=100)
+    dif_t = mat.strain_rate.DIF_CSCM_t(rev=Revision.REV_1, strain_rate_max=100)
+    dif_c = mat.strain_rate.DIF_CSCM_c(rev=Revision.REV_1, strain_rate_max=100)
     
     print(f"Tensile DIF curve shape: {dif_t.shape}")
     print(f"Compressive DIF curve shape: {dif_c.shape}")

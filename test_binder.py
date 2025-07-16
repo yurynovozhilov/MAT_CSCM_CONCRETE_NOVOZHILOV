@@ -21,7 +21,7 @@ def test_imports():
     
     print("\nTesting project modules...")
     
-    modules_to_test = ['d3py', 'CEB', 'plotcurves', 'CapModel']
+    modules_to_test = ['CEB', 'plotcurves', 'MatCSCM']
     
     for module_name in modules_to_test:
         try:

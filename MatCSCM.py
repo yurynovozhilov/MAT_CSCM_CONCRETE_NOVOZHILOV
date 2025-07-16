@@ -1,5 +1,13 @@
 import numpy as np
+from enum import Enum
 from CEB import CEB
+
+
+class Revision(Enum):
+    """Enumeration for CSCM model revisions."""
+    REV_1 = 1
+    REV_2 = 2
+    REV_3 = 3
 
 
 class MatCSCM:
@@ -97,7 +105,7 @@ class MatCSCM:
             f_c = self.parent.f_c
             return A_p * pow(f_c, 2) + B_p * f_c + C_p
         
-        def F_f(self, I, rev=3):
+        def F_f(self, I, rev=Revision.REV_3):
             """
             Shear surface F_f defined along the compression meridian TXC.
             
@@ -105,8 +113,8 @@ class MatCSCM:
             -----------
             I : array_like
                 First stress invariant
-            rev : int
-                Revision number (1, 2, or 3)
+            rev : Revision
+                Revision number (REV_1, REV_2, or REV_3)
             """
             f_c = self.parent.f_c
             result = self.alpha(rev)
@@ -115,109 +123,117 @@ class MatCSCM:
             return result
         
         # Compression meridian (TXC) parameters
-        def alpha(self, rev=3):
+        def alpha(self, rev=Revision.REV_3):
             """Alpha parameter for compression meridian."""
             f_c = self.parent.f_c
-            if rev == 1:
-                return self.P(-0.003, 0.3169747, 7.7047)
-            elif rev == 2:
-                return 13.9846 * np.exp(f_c / 68.8756) - 13.8981
-            elif rev == 3:
-                return 2.5801E-03 * pow(f_c, 2) + 1.6405E-01 * f_c + 4.3506E-01
-            else:
-                raise ValueError("Invalid revision number")
+            match rev:
+                case Revision.REV_1:
+                    return self.P(-0.003, 0.3169747, 7.7047)
+                case Revision.REV_2:
+                    return 13.9846 * np.exp(f_c / 68.8756) - 13.8981
+                case Revision.REV_3:
+                    return 2.5801E-03 * pow(f_c, 2) + 1.6405E-01 * f_c + 4.3506E-01
+                case _:
+                    raise ValueError(f"Invalid revision number: {rev}")
         
-        def lamda(self, rev=3):
+        def lamda(self, rev=Revision.REV_3):
             """Lambda parameter for compression meridian."""
             f_c = self.parent.f_c
-            if rev == 1:
-                return self.P(0.0, 0.0, 10.5)
-            elif rev == 2:
-                return 3.6657 * np.exp(f_c / 39.9363) - 4.7092
-            elif rev == 3:
-                return 3.0220E-03 * pow(f_c, 2.0231E+00)
-            else:
-                raise ValueError("Invalid revision number")
+            match rev:
+                case Revision.REV_1:
+                    return self.P(0.0, 0.0, 10.5)
+                case Revision.REV_2:
+                    return 3.6657 * np.exp(f_c / 39.9363) - 4.7092
+                case Revision.REV_3:
+                    return 3.0220E-03 * pow(f_c, 2.0231E+00)
+                case _:
+                    raise ValueError(f"Invalid revision number: {rev}")
         
-        def beta(self, rev=3):
+        def beta(self, rev=Revision.REV_3):
             """Beta parameter for compression meridian."""
             f_c = self.parent.f_c
-            if rev == 1:
-                return self.P(0.0, 0.0, 1.929E-02)
-            elif rev == 2:
-                return 18.17791 * pow(f_c, -1.7163)
-            elif rev == 3:
-                return 1.2317E+01 * pow(f_c, -1.5974E+00)
-            else:
-                raise ValueError("Invalid revision number")
+            match rev:
+                case Revision.REV_1:
+                    return self.P(0.0, 0.0, 1.929E-02)
+                case Revision.REV_2:
+                    return 18.17791 * pow(f_c, -1.7163)
+                case Revision.REV_3:
+                    return 1.2317E+01 * pow(f_c, -1.5974E+00)
+                case _:
+                    raise ValueError(f"Invalid revision number: {rev}")
         
-        def theta(self, rev=3):
+        def theta(self, rev=Revision.REV_3):
             """Theta parameter for compression meridian."""
             f_c = self.parent.f_c
-            if rev == 1:
-                return self.P(1.3216E-05, 2.3548E-03, 0.2140058)
-            elif rev == 2:
-                return 0.3533 - 3.3294E-4 * f_c - 3.8182E-6 * pow(f_c, 2)
-            elif rev == 3:
-                return -3.4286E-06 * pow(f_c, 2) - 3.7971E-04 * f_c + 3.5436E-01
-            else:
-                raise ValueError("Invalid revision number")
+            match rev:
+                case Revision.REV_1:
+                    return self.P(1.3216E-05, 2.3548E-03, 0.2140058)
+                case Revision.REV_2:
+                    return 0.3533 - 3.3294E-4 * f_c - 3.8182E-6 * pow(f_c, 2)
+                case Revision.REV_3:
+                    return -3.4286E-06 * pow(f_c, 2) - 3.7971E-04 * f_c + 3.5436E-01
+                case _:
+                    raise ValueError(f"Invalid revision number: {rev}")
         
-        def TXC(self, I, rev=3):
+        def TXC(self, I, rev=Revision.REV_3):
             """Compression meridian."""
             return self.F_f(I, rev)
         
         # Shear meridian (TOR) parameters
-        def alpha_1(self, rev=3):
+        def alpha_1(self, rev=Revision.REV_3):
             """Alpha_1 parameter for shear meridian."""
             f_c = self.parent.f_c
-            if rev == 1:
-                return self.P(0, 0, 0.74735)
-            elif rev == 2:
-                return 0.82
-            elif rev == 3:
-                return 1 / np.sqrt(3.0) + self.lamda_1(rev)
-            else:
-                raise ValueError("Invalid revision number")
+            match rev:
+                case Revision.REV_1:
+                    return self.P(0, 0, 0.74735)
+                case Revision.REV_2:
+                    return 0.82
+                case Revision.REV_3:
+                    return 1 / np.sqrt(3.0) + self.lamda_1(rev)
+                case _:
+                    raise ValueError(f"Invalid revision number: {rev}")
         
-        def lamda_1(self, rev=3):
+        def lamda_1(self, rev=Revision.REV_3):
             """Lambda_1 parameter for shear meridian."""
             f_c = self.parent.f_c
-            if rev == 1:
-                return self.P(0, 0, 0.17)
-            elif rev == 2:
-                return 0.2407
-            elif rev == 3:
-                return (-2.0833E-07 * pow(f_c, 3) + 3.7571E-05 * pow(f_c, 2) - 
-                        2.3049E-03 * f_c + 2.8860E-01)
-            else:
-                raise ValueError("Invalid revision number")
+            match rev:
+                case Revision.REV_1:
+                    return self.P(0, 0, 0.17)
+                case Revision.REV_2:
+                    return 0.2407
+                case Revision.REV_3:
+                    return (-2.0833E-07 * pow(f_c, 3) + 3.7571E-05 * pow(f_c, 2) - 
+                            2.3049E-03 * f_c + 2.8860E-01)
+                case _:
+                    raise ValueError(f"Invalid revision number: {rev}")
         
-        def beta_1(self, rev=3):
+        def beta_1(self, rev=Revision.REV_3):
             """Beta_1 parameter for shear meridian."""
             f_c = self.parent.f_c
-            if rev == 1:
-                return self.P(-1.9972e-05, 2.2655e-04, 8.1748e-02)
-            elif rev == 2:
-                return 0.33565 * pow(f_c, -0.95383)
-            elif rev == 3:
-                return 3.4093E-01 * pow(f_c, -9.4944E-01)
-            else:
-                raise ValueError("Invalid revision number")
+            match rev:
+                case Revision.REV_1:
+                    return self.P(-1.9972e-05, 2.2655e-04, 8.1748e-02)
+                case Revision.REV_2:
+                    return 0.33565 * pow(f_c, -0.95383)
+                case Revision.REV_3:
+                    return 3.4093E-01 * pow(f_c, -9.4944E-01)
+                case _:
+                    raise ValueError(f"Invalid revision number: {rev}")
         
-        def theta_1(self, rev=3):
+        def theta_1(self, rev=Revision.REV_3):
             """Theta_1 parameter for shear meridian."""
             f_c = self.parent.f_c
-            if rev == 1:
-                return self.P(-4.0856E-07, -1.2132E-06, 1.5593E-03)
-            elif rev == 2:
-                return 0
-            elif rev == 3:
-                return 0
-            else:
-                raise ValueError("Invalid revision number")
+            match rev:
+                case Revision.REV_1:
+                    return self.P(-4.0856E-07, -1.2132E-06, 1.5593E-03)
+                case Revision.REV_2:
+                    return 0
+                case Revision.REV_3:
+                    return 0
+                case _:
+                    raise ValueError(f"Invalid revision number: {rev}")
         
-        def Q_1(self, I, rev=3):
+        def Q_1(self, I, rev=Revision.REV_3):
             """Q_1 strength ratio for shear meridian."""
             f_c = self.parent.f_c
             if not isinstance(I, np.ndarray):
@@ -232,7 +248,7 @@ class MatCSCM:
                     # Values to simulate triangular yield surface in deviatoric plane for tensile pressure
                     return 1 / np.sqrt(3.0)
         
-        def TOR(self, I, rev=3):
+        def TOR(self, I, rev=Revision.REV_3):
             """Shear meridian."""
             I_tension = I[I <= 0]
             I_compression = I[I > 0]
@@ -241,55 +257,59 @@ class MatCSCM:
             return np.hstack((result_negative, result_compression))
         
         # Tensile meridian (TXE) parameters
-        def alpha_2(self, rev=3):
+        def alpha_2(self, rev=Revision.REV_3):
             """Alpha_2 parameter for tensile meridian."""
             f_c = self.parent.f_c
-            if rev == 1:
-                return self.P(0, 0, 0.66)
-            elif rev == 2:
-                return 0.76
-            elif rev == 3:
-                return round(0.5 + self.lamda_2(rev), 4)
-            else:
-                raise ValueError("Invalid revision number")
+            match rev:
+                case Revision.REV_1:
+                    return self.P(0, 0, 0.66)
+                case Revision.REV_2:
+                    return 0.76
+                case Revision.REV_3:
+                    return round(0.5 + self.lamda_2(rev), 4)
+                case _:
+                    raise ValueError(f"Invalid revision number: {rev}")
         
-        def lamda_2(self, rev=3):
+        def lamda_2(self, rev=Revision.REV_3):
             """Lambda_2 parameter for tensile meridian."""
             f_c = self.parent.f_c
-            if rev == 1:
-                return self.P(0, 0, 0.16)
-            elif rev == 2:
-                return 0.26
-            elif rev == 3:
-                return 3.0029E-01 * pow(f_c, -4.2269E-02)
-            else:
-                raise ValueError("Invalid revision number")
+            match rev:
+                case Revision.REV_1:
+                    return self.P(0, 0, 0.16)
+                case Revision.REV_2:
+                    return 0.26
+                case Revision.REV_3:
+                    return 3.0029E-01 * pow(f_c, -4.2269E-02)
+                case _:
+                    raise ValueError(f"Invalid revision number: {rev}")
         
-        def beta_2(self, rev=3):
+        def beta_2(self, rev=Revision.REV_3):
             """Beta_2 parameter for tensile meridian."""
             f_c = self.parent.f_c
-            if rev == 1:
-                return self.P(-1.9972e-05, 2.2655e-04, 8.2748e-02)
-            elif rev == 2:
-                return 0.285 * pow(f_c, -0.94843)
-            elif rev == 3:
-                return 2.8898E-01 * pow(f_c, -9.4776E-01)
-            else:
-                raise ValueError("Invalid revision number")
+            match rev:
+                case Revision.REV_1:
+                    return self.P(-1.9972e-05, 2.2655e-04, 8.2748e-02)
+                case Revision.REV_2:
+                    return 0.285 * pow(f_c, -0.94843)
+                case Revision.REV_3:
+                    return 2.8898E-01 * pow(f_c, -9.4776E-01)
+                case _:
+                    raise ValueError(f"Invalid revision number: {rev}")
         
-        def theta_2(self, rev=3):
+        def theta_2(self, rev=Revision.REV_3):
             """Theta_2 parameter for tensile meridian."""
             f_c = self.parent.f_c
-            if rev == 1:
-                return self.P(-4.8697e-07, -1.8883e-06, 1.8822e-03)
-            elif rev == 2:
-                return 0
-            elif rev == 3:
-                return 0
-            else:
-                raise ValueError("Invalid revision number")
+            match rev:
+                case Revision.REV_1:
+                    return self.P(-4.8697e-07, -1.8883e-06, 1.8822e-03)
+                case Revision.REV_2:
+                    return 0
+                case Revision.REV_3:
+                    return 0
+                case _:
+                    raise ValueError(f"Invalid revision number: {rev}")
         
-        def Q_2(self, I, rev=3):
+        def Q_2(self, I, rev=Revision.REV_3):
             """Q_2 strength ratio for tensile meridian."""
             f_c = self.parent.f_c
             if not isinstance(I, np.ndarray):
@@ -304,7 +324,7 @@ class MatCSCM:
                     # Values to simulate triangular yield surface in deviatoric plane for tensile pressure
                     return 0.5
         
-        def TXE(self, I, rev=3):
+        def TXE(self, I, rev=Revision.REV_3):
             """Tensile meridian."""
             I_tension = I[I <= 0]
             I_compression = I[I > 0]
@@ -312,7 +332,7 @@ class MatCSCM:
             result_compression = self.Q_2(I_compression, rev) * self.TXC(I_compression, rev)
             return np.hstack((result_negative, result_compression))
         
-        def Rubin(self, I, rev=3, resolution=30):
+        def Rubin(self, I, rev=Revision.REV_3, resolution=30):
             """Rubin yield surface calculation."""
             beta_hat = np.linspace(-np.pi / 6.0, np.pi, resolution)
             
@@ -341,31 +361,33 @@ class MatCSCM:
         def __init__(self, parent):
             self.parent = parent
         
-        def X0(self, rev=3):
+        def X0(self, rev=Revision.REV_3):
             """Initial location of the cap when kappa = kappa_0."""
             f_c = self.parent.f_c
-            if rev == 1:
-                return self.parent.yield_surface.P(8.769178e-03, -7.3302306e-02, 84.85)
-            elif rev == 2:
-                return 17.087 + 1.892 * f_c
-            elif rev == 3:
-                return 4.0224E+00 * f_c - 7.0784E+01
-            else:
-                raise ValueError("Invalid revision number")
+            match rev:
+                case Revision.REV_1:
+                    return self.parent.yield_surface.P(8.769178e-03, -7.3302306e-02, 84.85)
+                case Revision.REV_2:
+                    return 17.087 + 1.892 * f_c
+                case Revision.REV_3:
+                    return 4.0224E+00 * f_c - 7.0784E+01
+                case _:
+                    raise ValueError(f"Invalid revision number: {rev}")
         
-        def R(self, rev=3):
+        def R(self, rev=Revision.REV_3):
             """Ellipticity ratio - ratio of major to minor ellipse axes."""
             f_c = self.parent.f_c
-            if rev == 1:
-                return 5
-            elif rev == 2:
-                return 4.45994 * np.exp(-f_c / 11.51679) + 1.95358
-            elif rev == 3:
-                return 5.0000E-04 * pow(f_c, 2) - 5.9000E-02 * f_c + 3.6600E+00
-            else:
-                raise ValueError("Invalid revision number")
+            match rev:
+                case Revision.REV_1:
+                    return 5
+                case Revision.REV_2:
+                    return 4.45994 * np.exp(-f_c / 11.51679) + 1.95358
+                case Revision.REV_3:
+                    return 5.0000E-04 * pow(f_c, 2) - 5.9000E-02 * f_c + 3.6600E+00
+                case _:
+                    raise ValueError(f"Invalid revision number: {rev}")
         
-        def W(self, rev=3):
+        def W(self, rev=Revision.REV_3):
             """
             Maximum plastic volume strain.
             
@@ -375,36 +397,39 @@ class MatCSCM:
             to the porosity of the air voids. A value of 0.05 indicates an air void 
             porosity of 5 percent.
             """
-            if rev == 1:
-                return 0.05
-            elif rev == 2:
-                return 0.065
-            elif rev == 3:
-                return 0.065
-            else:
-                raise ValueError("Invalid revision number")
+            match rev:
+                case Revision.REV_1:
+                    return 0.05
+                case Revision.REV_2:
+                    return 0.065
+                case Revision.REV_3:
+                    return 0.065
+                case _:
+                    raise ValueError(f"Invalid revision number: {rev}")
         
-        def D_1(self, rev=3):
+        def D_1(self, rev=Revision.REV_3):
             """D_1 parameter for cap surface."""
-            if rev == 1:
-                return 2.5E-4
-            elif rev == 2:
-                return 6.11e-4
-            elif rev == 3:
-                return 6.11e-4
-            else:
-                raise ValueError("Invalid revision number")
+            match rev:
+                case Revision.REV_1:
+                    return 2.5E-4
+                case Revision.REV_2:
+                    return 6.11e-4
+                case Revision.REV_3:
+                    return 6.11e-4
+                case _:
+                    raise ValueError(f"Invalid revision number: {rev}")
         
-        def D_2(self, rev=3):
+        def D_2(self, rev=Revision.REV_3):
             """D_2 parameter for cap surface."""
-            if rev == 1:
-                return 3.49E-7
-            elif rev == 2:
-                return 2.225E-6
-            elif rev == 3:
-                return 2.225E-6
-            else:
-                raise ValueError("Invalid revision number")
+            match rev:
+                case Revision.REV_1:
+                    return 3.49E-7
+                case Revision.REV_2:
+                    return 2.225E-6
+                case Revision.REV_3:
+                    return 2.225E-6
+                case _:
+                    raise ValueError(f"Invalid revision number: {rev}")
         
         def L(self, kappa, kappa_0):
             """
@@ -421,7 +446,7 @@ class MatCSCM:
             else:
                 return kappa_0
         
-        def X(self, I, kappa, kappa_0, rev=3):
+        def X(self, I, kappa, kappa_0, rev=Revision.REV_3):
             """
             X(kappa) is the position on the I-axis where the outer
             edge of the ellipse (cap surface) intersects.
@@ -429,7 +454,7 @@ class MatCSCM:
             return (self.L(kappa, kappa_0) + 
                     self.R(rev) * self.parent.yield_surface.F_f(self.L(kappa, kappa_0), rev))
         
-        def F_c(self, I, kappa, kappa_0, rev=3):
+        def F_c(self, I, kappa, kappa_0, rev=Revision.REV_3):
             """
             Cap failure surface function F_c.
             kappa is a hardening parameter that causes the cap 
@@ -437,7 +462,7 @@ class MatCSCM:
             """
             result = (I - self.L(kappa, kappa_0))
             result *= (abs(result) + result)
-            result /= (2 * pow(self.X0(rev=3), 2))
+            result /= (2 * pow(self.X0(rev), 2))
             result = 1 - result
             
             for i, value in enumerate(result):
@@ -445,7 +470,7 @@ class MatCSCM:
                     result[i] = 0
             return result
         
-        def epsilon_v_p(self, X, rev=3):
+        def epsilon_v_p(self, X, rev=Revision.REV_3):
             """
             Plastic volume strain - basis for motion (expansion and contraction) of the cap.
             """
@@ -453,7 +478,7 @@ class MatCSCM:
                     (1 - np.exp(-self.D_1(rev) * (X - self.X0(rev)) - 
                                 self.D_2(rev) * pow(X - self.X0(rev), 2))))
         
-        def hydrostatic_compression_parameters(self, X, rev=3):
+        def hydrostatic_compression_parameters(self, X, rev=Revision.REV_3):
             """Hydrostatic compression parameters."""
             return (self.D_1(rev) * (X - self.X0(rev)) + 
                     self.D_2(rev) * pow(X - self.X0(rev), 2))
@@ -465,38 +490,40 @@ class MatCSCM:
         def __init__(self, parent):
             self.parent = parent
         
-        def B(self, rev=1):
+        def B(self, rev=Revision.REV_1):
             """Ductile shape softening parameter."""
             f_c = self.parent.f_c
             E = self.parent.ceb_data['E']
             G_f_c = self.parent.ceb_data['G_fc']
             l = self.parent.esize
             
-            if rev == 1:
-                return 100
-            elif rev == 2:
-                bfit = 2.0 * G_f_c / l
-                bfit += f_c * 2 / E
-                bfit = pow(bfit, 0.5)
-                bfit += f_c / pow(E, 0.5)
-                bfit /= G_f_c / l
-                return bfit
-            else:
-                raise ValueError("Invalid revision number")
+            match rev:
+                case Revision.REV_1:
+                    return 100
+                case Revision.REV_2:
+                    bfit = 2.0 * G_f_c / l
+                    bfit += f_c * 2 / E
+                    bfit = pow(bfit, 0.5)
+                    bfit += f_c / pow(E, 0.5)
+                    bfit /= G_f_c / l
+                    return bfit
+                case _:
+                    raise ValueError(f"Invalid revision number: {rev}")
         
-        def D(self, rev=1):
+        def D(self, rev=Revision.REV_1):
             """Brittle shape softening parameter."""
             f_t = self.parent.ceb_data['f_t']
             E = self.parent.ceb_data['E']
             G_ft = self.parent.ceb_data['G_ft']
             l = self.parent.esize
             
-            if rev == 1:
-                return 0.1
-            elif rev == 2:
-                return l * f_t / (G_ft * pow(E, 0.5))
-            else:
-                raise ValueError("Invalid revision number")
+            match rev:
+                case Revision.REV_1:
+                    return 0.1
+                case Revision.REV_2:
+                    return l * f_t / (G_ft * pow(E, 0.5))
+                case _:
+                    raise ValueError(f"Invalid revision number: {rev}")
         
         def pmod(self):
             """
@@ -536,72 +563,76 @@ class MatCSCM:
         def __init__(self, parent):
             self.parent = parent
         
-        def n_t(self, rev=1):
+        def n_t(self, rev=Revision.REV_1):
             """n_t parameter for tensile strain rate."""
-            if rev == 1:
-                return 0.48
-            elif rev == 2:
-                return 0
-            else:
-                raise ValueError("Invalid revision number")
+            match rev:
+                case Revision.REV_1:
+                    return 0.48
+                case Revision.REV_2:
+                    return 0
+                case _:
+                    raise ValueError(f"Invalid revision number: {rev}")
         
-        def eta_0_t(self, rev=1):
+        def eta_0_t(self, rev=Revision.REV_1):
             """eta_0_t parameter for tensile strain rate."""
             f_c = self.parent.f_c
             f_c_in_psi = f_c * 145.0377
-            if rev == 1:
-                return self.parent.yield_surface.P(8.0614774E-13, -9.77736719E-10, 5.0752351E-05)
-            elif rev == 2:
-                return 0
-            else:
-                raise ValueError("Invalid revision number")
+            match rev:
+                case Revision.REV_1:
+                    return self.parent.yield_surface.P(8.0614774E-13, -9.77736719E-10, 5.0752351E-05)
+                case Revision.REV_2:
+                    return 0
+                case _:
+                    raise ValueError(f"Invalid revision number: {rev}")
         
-        def eta_t(self, strain_rate, rev=1):
+        def eta_t(self, strain_rate, rev=Revision.REV_1):
             """Fluidity parameter in uniaxial tensile stress."""
             return self.eta_0_t(rev) / pow(strain_rate, self.n_t(rev))
         
-        def n_c(self, rev=1):
+        def n_c(self, rev=Revision.REV_1):
             """n_c parameter for compressive strain rate."""
-            if rev == 1:
-                return 0.78
-            elif rev == 2:
-                return 0
-            else:
-                raise ValueError("Invalid revision number")
+            match rev:
+                case Revision.REV_1:
+                    return 0.78
+                case Revision.REV_2:
+                    return 0
+                case _:
+                    raise ValueError(f"Invalid revision number: {rev}")
         
-        def eta_0_c(self, rev=1):
+        def eta_0_c(self, rev=Revision.REV_1):
             """eta_0_c parameter for compressive strain rate."""
             f_c = self.parent.f_c
             f_c_in_psi = f_c * 145.0377
-            if rev == 1:
-                return self.parent.yield_surface.P(1.2772337E-11, -1.0613722E-07, 3.203497E-4)
-            elif rev == 2:
-                return 0
-            else:
-                raise ValueError("Invalid revision number")
+            match rev:
+                case Revision.REV_1:
+                    return self.parent.yield_surface.P(1.2772337E-11, -1.0613722E-07, 3.203497E-4)
+                case Revision.REV_2:
+                    return 0
+                case _:
+                    raise ValueError(f"Invalid revision number: {rev}")
         
-        def eta_c(self, strain_rate, rev=1):
+        def eta_c(self, strain_rate, rev=Revision.REV_1):
             """Fluidity parameter in uniaxial compressive stress."""
             return self.eta_0_c(rev) / pow(strain_rate, self.n_c(rev))
         
-        def eta_s(self, rev=1):
+        def eta_s(self, strain_rate, rev=Revision.REV_1):
             """Fluidity parameter in shear stress."""
-            return self.Srate(rev) * self.eta_t(rev)
+            return self.Srate(rev) * self.eta_t(strain_rate, rev)
         
-        def Srate(self, rev=1):
+        def Srate(self, rev=Revision.REV_1):
             """Ratio of effective shear stress to tensile stress fluidity parameters."""
             return 1.0
         
-        def overt(self, rev=1):
+        def overt(self, rev=Revision.REV_1):
             """Over-stress limit for tension."""
             f_c = self.parent.f_c
             return self.parent.yield_surface.P(1.309663E-02, -0.3927659, 21.45)
         
-        def overc(self, rev=1):
+        def overc(self, rev=Revision.REV_1):
             """Over-stress limit for compression."""
             return self.overt(rev)
         
-        def DIF_CSCM_t(self, rev=1, strain_rate_max=1000):
+        def DIF_CSCM_t(self, rev=Revision.REV_1, strain_rate_max=1000):
             """Dynamic Increase Factor for tension."""
             f_t = self.parent.ceb_data['f_t']
             E = self.parent.ceb_data['E']
@@ -621,7 +652,7 @@ class MatCSCM:
             DIF_curve = np.vstack((strain_rate, DIF))
             return DIF_curve
         
-        def DIF_CSCM_c(self, rev=1, strain_rate_max=1000):
+        def DIF_CSCM_c(self, rev=Revision.REV_1, strain_rate_max=1000):
             """Dynamic Increase Factor for compression."""
             f_c = self.parent.f_c
             E = self.parent.ceb_data['E']
@@ -672,34 +703,34 @@ class MatCSCM:
         # Card 3
         CSCM['G'] = {'card': 3, 'position': 1, 'type': 'F', 'value': data['G']}
         CSCM['K'] = {'card': 3, 'position': 2, 'type': 'F', 'value': data['K']}
-        CSCM['ALPHA'] = {'card': 3, 'position': 3, 'type': 'F', 'value': self.yield_surface.alpha(2)}
-        CSCM['THETA'] = {'card': 3, 'position': 4, 'type': 'F', 'value': self.yield_surface.theta(2)}
-        CSCM['LAMBDA'] = {'card': 3, 'position': 5, 'type': 'F', 'value': self.yield_surface.lamda(2)}
-        CSCM['BETA'] = {'card': 3, 'position': 6, 'type': 'F', 'value': self.yield_surface.beta(2)}
+        CSCM['ALPHA'] = {'card': 3, 'position': 3, 'type': 'F', 'value': self.yield_surface.alpha(Revision.REV_2)}
+        CSCM['THETA'] = {'card': 3, 'position': 4, 'type': 'F', 'value': self.yield_surface.theta(Revision.REV_2)}
+        CSCM['LAMBDA'] = {'card': 3, 'position': 5, 'type': 'F', 'value': self.yield_surface.lamda(Revision.REV_2)}
+        CSCM['BETA'] = {'card': 3, 'position': 6, 'type': 'F', 'value': self.yield_surface.beta(Revision.REV_2)}
         CSCM['NH'] = {'card': 3, 'position': 7, 'type': 'F', 'value': self.nh}
         CSCM['CH'] = {'card': 3, 'position': 8, 'type': 'F', 'value': self.ch}
         
         # Card 4
-        CSCM['ALPHA1'] = {'card': 4, 'position': 1, 'type': 'F', 'value': self.yield_surface.alpha_1(2)}
-        CSCM['THETA1'] = {'card': 4, 'position': 2, 'type': 'F', 'value': self.yield_surface.theta_1(2)}
-        CSCM['LAMBDA1'] = {'card': 4, 'position': 3, 'type': 'F', 'value': self.yield_surface.lamda_1(2)}
-        CSCM['BETA1'] = {'card': 4, 'position': 4, 'type': 'F', 'value': self.yield_surface.beta_1(2)}
-        CSCM['ALPHA2'] = {'card': 4, 'position': 5, 'type': 'F', 'value': self.yield_surface.alpha_2(2)}
-        CSCM['THETA2'] = {'card': 4, 'position': 6, 'type': 'F', 'value': self.yield_surface.theta_2(2)}
-        CSCM['LAMBDA2'] = {'card': 4, 'position': 7, 'type': 'F', 'value': self.yield_surface.lamda_2(2)}
-        CSCM['BETA2'] = {'card': 4, 'position': 8, 'type': 'F', 'value': self.yield_surface.beta_2(2)}
+        CSCM['ALPHA1'] = {'card': 4, 'position': 1, 'type': 'F', 'value': self.yield_surface.alpha_1(Revision.REV_2)}
+        CSCM['THETA1'] = {'card': 4, 'position': 2, 'type': 'F', 'value': self.yield_surface.theta_1(Revision.REV_2)}
+        CSCM['LAMBDA1'] = {'card': 4, 'position': 3, 'type': 'F', 'value': self.yield_surface.lamda_1(Revision.REV_2)}
+        CSCM['BETA1'] = {'card': 4, 'position': 4, 'type': 'F', 'value': self.yield_surface.beta_1(Revision.REV_2)}
+        CSCM['ALPHA2'] = {'card': 4, 'position': 5, 'type': 'F', 'value': self.yield_surface.alpha_2(Revision.REV_2)}
+        CSCM['THETA2'] = {'card': 4, 'position': 6, 'type': 'F', 'value': self.yield_surface.theta_2(Revision.REV_2)}
+        CSCM['LAMBDA2'] = {'card': 4, 'position': 7, 'type': 'F', 'value': self.yield_surface.lamda_2(Revision.REV_2)}
+        CSCM['BETA2'] = {'card': 4, 'position': 8, 'type': 'F', 'value': self.yield_surface.beta_2(Revision.REV_2)}
         
         # Card 5
-        CSCM['R'] = {'card': 5, 'position': 1, 'type': 'F', 'value': self.cap_surface.R(2)}
-        CSCM['X0'] = {'card': 5, 'position': 2, 'type': 'F', 'value': self.cap_surface.X0(2)}
-        CSCM['W'] = {'card': 5, 'position': 3, 'type': 'F', 'value': self.cap_surface.W(2)}
-        CSCM['D1'] = {'card': 5, 'position': 4, 'type': 'F', 'value': self.cap_surface.D_1(2)}
-        CSCM['D2'] = {'card': 5, 'position': 5, 'type': 'F', 'value': self.cap_surface.D_2(2)}
+        CSCM['R'] = {'card': 5, 'position': 1, 'type': 'F', 'value': self.cap_surface.R(Revision.REV_2)}
+        CSCM['X0'] = {'card': 5, 'position': 2, 'type': 'F', 'value': self.cap_surface.X0(Revision.REV_2)}
+        CSCM['W'] = {'card': 5, 'position': 3, 'type': 'F', 'value': self.cap_surface.W(Revision.REV_2)}
+        CSCM['D1'] = {'card': 5, 'position': 4, 'type': 'F', 'value': self.cap_surface.D_1(Revision.REV_2)}
+        CSCM['D2'] = {'card': 5, 'position': 5, 'type': 'F', 'value': self.cap_surface.D_2(Revision.REV_2)}
         
         # Card 6
-        CSCM['B'] = {'card': 6, 'position': 1, 'type': 'F', 'value': self.damage.B(1)}
+        CSCM['B'] = {'card': 6, 'position': 1, 'type': 'F', 'value': self.damage.B(Revision.REV_1)}
         CSCM['GFC'] = {'card': 6, 'position': 2, 'type': 'F', 'value': data['G_fc']}
-        CSCM['D'] = {'card': 6, 'position': 3, 'type': 'F', 'value': self.damage.D(1)}
+        CSCM['D'] = {'card': 6, 'position': 3, 'type': 'F', 'value': self.damage.D(Revision.REV_1)}
         CSCM['GFT'] = {'card': 6, 'position': 4, 'type': 'F', 'value': data['G_ft']}
         CSCM['GFS'] = {'card': 6, 'position': 5, 'type': 'F', 'value': data['G_fs']}
         CSCM['PWRC'] = {'card': 6, 'position': 6, 'type': 'F', 'value': self.pwrc}
@@ -707,13 +738,13 @@ class MatCSCM:
         CSCM['PMOD'] = {'card': 6, 'position': 8, 'type': 'F', 'value': self.pmod}
         
         # Card 7
-        CSCM['ETA_0_C'] = {'card': 7, 'position': 1, 'type': 'F', 'value': self.strain_rate.eta_0_c(1)}
-        CSCM['N_C'] = {'card': 7, 'position': 2, 'type': 'F', 'value': self.strain_rate.n_c(1)}
-        CSCM['ETA_0_T'] = {'card': 7, 'position': 3, 'type': 'F', 'value': self.strain_rate.eta_0_t(1)}
-        CSCM['N_T'] = {'card': 7, 'position': 4, 'type': 'F', 'value': self.strain_rate.n_t(1)}
-        CSCM['OVERC'] = {'card': 7, 'position': 5, 'type': 'F', 'value': self.strain_rate.overc(1)}
-        CSCM['OVERT'] = {'card': 7, 'position': 6, 'type': 'F', 'value': self.strain_rate.overt(1)}
-        CSCM['SRATE'] = {'card': 7, 'position': 7, 'type': 'F', 'value': self.strain_rate.Srate(1)}
+        CSCM['ETA_0_C'] = {'card': 7, 'position': 1, 'type': 'F', 'value': self.strain_rate.eta_0_c(Revision.REV_1)}
+        CSCM['N_C'] = {'card': 7, 'position': 2, 'type': 'F', 'value': self.strain_rate.n_c(Revision.REV_1)}
+        CSCM['ETA_0_T'] = {'card': 7, 'position': 3, 'type': 'F', 'value': self.strain_rate.eta_0_t(Revision.REV_1)}
+        CSCM['N_T'] = {'card': 7, 'position': 4, 'type': 'F', 'value': self.strain_rate.n_t(Revision.REV_1)}
+        CSCM['OVERC'] = {'card': 7, 'position': 5, 'type': 'F', 'value': self.strain_rate.overc(Revision.REV_1)}
+        CSCM['OVERT'] = {'card': 7, 'position': 6, 'type': 'F', 'value': self.strain_rate.overt(Revision.REV_1)}
+        CSCM['SRATE'] = {'card': 7, 'position': 7, 'type': 'F', 'value': self.strain_rate.Srate(Revision.REV_1)}
         CSCM['REPOW'] = {'card': 7, 'position': 8, 'type': 'F', 'value': self.repow}
         
         return CSCM

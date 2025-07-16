@@ -6,7 +6,7 @@ This script provides examples and advanced usage patterns for the
 object-oriented MatCSCM class implementation.
 """
 
-from MatCSCM import MatCSCM, keyword_to_text
+from MatCSCM import MatCSCM, keyword_to_text, Revision
 
 
 def basic_usage_example():
@@ -43,10 +43,10 @@ def advanced_usage_example():
     mat = MatCSCM(f_c=40.0, dmax=20.0, rho=2.4E-9)
     
     print("\n1. Access to nested class methods:")
-    print(f"   Yield surface alpha: {mat.yield_surface.alpha(2):.6f}")
-    print(f"   Cap surface X0: {mat.cap_surface.X0(2):.6f}")
-    print(f"   Damage parameter B: {mat.damage.B(1):.6f}")
-    print(f"   Strain rate n_t: {mat.strain_rate.n_t(1):.6f}")
+    print(f"   Yield surface alpha: {mat.yield_surface.alpha(Revision.REV_2):.6f}")
+    print(f"   Cap surface X0: {mat.cap_surface.X0(Revision.REV_2):.6f}")
+    print(f"   Damage parameter B: {mat.damage.B(Revision.REV_1):.6f}")
+    print(f"   Strain rate n_t: {mat.strain_rate.n_t(Revision.REV_1):.6f}")
     
     print("\n2. Direct access to CEB data:")
     ceb_data = mat.ceb_data
@@ -56,13 +56,13 @@ def advanced_usage_example():
     print("\n3. Calculate yield surface values:")
     import numpy as np
     I_values = np.array([0, 10, 20, 30])
-    txc_values = mat.yield_surface.TXC(I_values, rev=2)
+    txc_values = mat.yield_surface.TXC(I_values, rev=Revision.REV_2)
     print(f"   I values: {I_values}")
     print(f"   TXC values: {txc_values}")
     
     print("\n4. Calculate dynamic increase factors:")
-    dif_t = mat.strain_rate.DIF_CSCM_t(rev=1, strain_rate_max=100)
-    dif_c = mat.strain_rate.DIF_CSCM_c(rev=1, strain_rate_max=100)
+    dif_t = mat.strain_rate.DIF_CSCM_t(rev=Revision.REV_1, strain_rate_max=100)
+    dif_c = mat.strain_rate.DIF_CSCM_c(rev=Revision.REV_1, strain_rate_max=100)
     print(f"   Max tensile DIF: {np.max(dif_t[1, :]):.3f}")
     print(f"   Max compressive DIF: {np.max(dif_c[1, :]):.3f}")
 

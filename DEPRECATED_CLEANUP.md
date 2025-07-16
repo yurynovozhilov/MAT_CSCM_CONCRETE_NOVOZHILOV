@@ -1,32 +1,32 @@
 # Deprecated Code Cleanup Report
 
 ## Summary
-This document summarizes the cleanup of deprecated functionality from the MAT_CSCM_CONCRETE_NOVOZHILOV project.
+This document summarizes the complete cleanup of deprecated functionality from the MAT_CSCM_CONCRETE_NOVOZHILOV project. All backward compatibility support has been removed.
 
 ## Changes Made
 
-### 1. Removed Deprecated Functions from d3py.py
-- **CSCM()** - Legacy function for creating CSCM material parameters
-- **keyword2text()** - Legacy function for converting keyword data to text
-- **CEBout()** - Legacy function for generating CEB output
+### 1. Completely Removed Legacy Modules
+- **CapModel.py** - Deleted entirely (contained legacy functions for backward compatibility)
+- **d3py.py** - Previously removed (contained deprecated CSCM(), keyword2text(), CEBout() functions)
 
-The `d3py.py` file now contains only deprecation notices and imports. All functionality has been moved to the modern `MatCSCM` class.
+### 2. Removed Numeric Revision Support
+- All methods now require `Revision` enum instead of numeric values (1, 2, 3)
+- No backward compatibility for numeric revision parameters
 
-### 2. Updated Test Files
-- **test_iretrc.py** - Updated to use `MatCSCM` class instead of deprecated `CSCM()` function
-- **test_modules.py** - Updated to use `MatCSCM` class instead of deprecated functions
-
-### 3. Renamed and Updated Migration Guide
-- **migration_guide.py** → **usage_examples.py**
-- Removed all deprecated compatibility wrapper functions
-- Updated to focus on modern usage patterns and best practices
-- Removed migration examples showing old vs new approaches
+### 3. Updated All Files to Use Revision Enum
+- **test_matcscm.py** - Updated all `rev=1,2,3` to use `Revision.REV_1,REV_2,REV_3`
+- **test_iretrc.py** - Already using modern `MatCSCM` class
+- **test_modules.py** - Completely rewritten to use `MatCSCM` instead of `CapModel` functions
+- **test_binder.py** - Updated module list to exclude `CapModel`
+- **example_usage.py** - Updated all revision parameters to use `Revision` enum
+- **usage_examples.py** - Updated all revision parameters to use `Revision` enum
 
 ### 4. Files Kept Unchanged
 - **arc/** folder - Contains archived implementations, kept for historical reference
-- **MatCSCM.py** - Modern implementation, no changes needed
-- **example_usage.py** - Already using modern implementation
-- **test_matcscm.py** - Already using modern implementation
+- **MatCSCM.py** - Modern implementation with strict enum-only revision support
+- **CEB.py** - Independent module, no changes needed
+- **plotcurves.py** - Utility module, no changes needed
+- **transformation.py** - Utility module, no changes needed
 
 ## Current State
 

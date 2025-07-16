@@ -30,9 +30,8 @@ def test_imports():
         ('numpy', 'np'),
         ('matplotlib.pyplot', 'plt'),
         ('CEB', None),
-        ('CapModel', None),
+
         ('plotcurves', None),
-        ('d3py', None),
         ('transformation', None)
     ]
     
@@ -58,8 +57,7 @@ def test_basic_functionality():
     try:
         import numpy as np
         from CEB import CEB, DIF_c, DIF_t
-        from CapModel import alpha, lamda, Q_2, TXC, TXE
-        from MatCSCM import MatCSCM
+        from MatCSCM import MatCSCM, Revision
         
         # Test CEB module
         f_c = 40.0
@@ -71,22 +69,24 @@ def test_basic_functionality():
         dif_t = DIF_t(f_c)
         print(f"✅ DIF: compression shape={dif_c.shape}, tension shape={dif_t.shape}")
         
-        # Test CapModel functions
-        alpha_val = alpha(f_c, rev=3)
-        lambda_val = lamda(f_c, rev=3)
-        print(f"✅ CapModel: alpha={alpha_val:.2f}, lambda={lambda_val:.2f}")
+        # Test MatCSCM
+        mat_cscm = MatCSCM(f_c=f_c)
+        
+        # Test yield surface functions
+        alpha_val = mat_cscm.yield_surface.alpha(Revision.REV_3)
+        lambda_val = mat_cscm.yield_surface.lamda(Revision.REV_3)
+        print(f"✅ MatCSCM yield surface: alpha={alpha_val:.2f}, lambda={lambda_val:.2f}")
         
         # Test functions with arrays
         I = np.array([0, 10, 20])
-        q2_vals = Q_2(f_c, I, rev=1)
-        txc_vals = TXC(f_c, I, rev=1)
-        txe_vals = TXE(f_c, I, rev=1)
+        q2_vals = mat_cscm.yield_surface.Q_2(I, rev=Revision.REV_1)
+        txc_vals = mat_cscm.yield_surface.TXC(I, rev=Revision.REV_1)
+        txe_vals = mat_cscm.yield_surface.TXE(I, rev=Revision.REV_1)
         print(f"✅ Array functions: Q_2 shape={q2_vals.shape}")
         
-        # Test MatCSCM
-        mat_cscm = MatCSCM(f_c=f_c)
+        # Test keyword generation
         cscm_data = mat_cscm.generate_keyword()
-        print(f"✅ MatCSCM: MID={cscm_data['MID']['value']}")
+        print(f"✅ MatCSCM keyword: MID={cscm_data['MID']['value']}")
         
         return True
         
@@ -102,25 +102,29 @@ def test_notebook_functions():
     
     try:
         import numpy as np
-        from CapModel import Q_2, TXC, TXE
+        from MatCSCM import MatCSCM, Revision
         
-        # Fixed functions from notebook
-        def Q1MC(f_c, I, rev=1):
-            return np.sqrt(3)*Q_2(f_c,I,rev)/(1+Q_2(f_c, I, rev))
-
-        def Q2MC(f_c, I, rev=1):
-            return TXE(f_c, I, rev)/TXC(f_c, I, rev)
-
-        def Q1WW(f_c, I, rev=1):
-            q=(1-pow(Q_2(f_c, I, rev),2))
-            return (np.sqrt(3)*q+(2*Q_2(f_c, I, rev)-1)*np.sqrt((3*q)+5*pow(Q_2(f_c, I, rev),2)-4*Q_2(f_c, I, rev)))/(3*q+pow(1-2*Q_2(f_c, I, rev),2))
+        # Create MatCSCM instance
+        mat = MatCSCM(f_c=40)
         
-        f_c = 40
+        # Fixed functions from notebook using MatCSCM
+        def Q1MC(mat, I, rev=Revision.REV_1):
+            q2 = mat.yield_surface.Q_2(I, rev)
+            return np.sqrt(3)*q2/(1+q2)
+
+        def Q2MC(mat, I, rev=Revision.REV_1):
+            return mat.yield_surface.TXE(I, rev)/mat.yield_surface.TXC(I, rev)
+
+        def Q1WW(mat, I, rev=Revision.REV_1):
+            q2 = mat.yield_surface.Q_2(I, rev)
+            q=(1-pow(q2,2))
+            return (np.sqrt(3)*q+(2*q2-1)*np.sqrt((3*q)+5*pow(q2,2)-4*q2))/(3*q+pow(1-2*q2,2))
+        
         I = np.array([0, 10, 20])
         
-        q1mc_result = Q1MC(f_c, I, rev=1)
-        q2mc_result = Q2MC(f_c, I, rev=1)
-        q1ww_result = Q1WW(f_c, I, rev=1)
+        q1mc_result = Q1MC(mat, I, rev=Revision.REV_1)
+        q2mc_result = Q2MC(mat, I, rev=Revision.REV_1)
+        q1ww_result = Q1WW(mat, I, rev=Revision.REV_1)
         
         print(f"✅ Q1MC: result obtained")
         print(f"✅ Q2MC: shape={q2mc_result.shape}")

@@ -13,7 +13,7 @@ import os
 # Add current directory to path
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from MatCSCM import MatCSCM, keyword_to_text
+from MatCSCM import MatCSCM, keyword_to_text, Revision
 from CEB import CEB
 
 
@@ -55,26 +55,26 @@ def test_nested_classes():
     mat = MatCSCM(f_c=40.0, dmax=20.0)
     
     # Test YieldSurface class
-    alpha = mat.yield_surface.alpha(rev=2)
+    alpha = mat.yield_surface.alpha(rev=Revision.REV_2)
     assert isinstance(alpha, (int, float, np.number))
     assert alpha > 0
     print("✓ YieldSurface class working")
     
     # Test CapSurface class
-    X0 = mat.cap_surface.X0(rev=2)
+    X0 = mat.cap_surface.X0(rev=Revision.REV_2)
     assert isinstance(X0, (int, float, np.number))
     print("✓ CapSurface class working")
     
     # Test Damage class
-    B = mat.damage.B(rev=1)
-    D = mat.damage.D(rev=1)
+    B = mat.damage.B(rev=Revision.REV_1)
+    D = mat.damage.D(rev=Revision.REV_1)
     assert isinstance(B, (int, float, np.number))
     assert isinstance(D, (int, float, np.number))
     print("✓ Damage class working")
     
     # Test StrainRate class
-    n_t = mat.strain_rate.n_t(rev=1)
-    n_c = mat.strain_rate.n_c(rev=1)
+    n_t = mat.strain_rate.n_t(rev=Revision.REV_1)
+    n_c = mat.strain_rate.n_c(rev=Revision.REV_1)
     assert isinstance(n_t, (int, float, np.number))
     assert isinstance(n_c, (int, float, np.number))
     print("✓ StrainRate class working")
@@ -90,16 +90,16 @@ def test_yield_surface_calculations():
     I_values = np.array([0, 10, 20, 30])
     
     # Test TXC (compression meridian)
-    txc_values = mat.yield_surface.TXC(I_values, rev=2)
+    txc_values = mat.yield_surface.TXC(I_values, rev=Revision.REV_2)
     assert isinstance(txc_values, np.ndarray)
     assert len(txc_values) == len(I_values)
     print("✓ TXC calculation successful")
     
     # Test parameter functions
-    alpha = mat.yield_surface.alpha(rev=2)
-    lamda = mat.yield_surface.lamda(rev=2)
-    beta = mat.yield_surface.beta(rev=2)
-    theta = mat.yield_surface.theta(rev=2)
+    alpha = mat.yield_surface.alpha(rev=Revision.REV_2)
+    lamda = mat.yield_surface.lamda(rev=Revision.REV_2)
+    beta = mat.yield_surface.beta(rev=Revision.REV_2)
+    theta = mat.yield_surface.theta(rev=Revision.REV_2)
     
     assert all(isinstance(x, (int, float, np.number)) for x in [alpha, lamda, beta, theta])
     print("✓ Parameter calculations successful")
@@ -112,8 +112,8 @@ def test_strain_rate_effects():
     mat = MatCSCM(f_c=35.0, dmax=19.0)
     
     # Test DIF calculations
-    dif_t = mat.strain_rate.DIF_CSCM_t(rev=1, strain_rate_max=100)
-    dif_c = mat.strain_rate.DIF_CSCM_c(rev=1, strain_rate_max=100)
+    dif_t = mat.strain_rate.DIF_CSCM_t(rev=Revision.REV_1, strain_rate_max=100)
+    dif_c = mat.strain_rate.DIF_CSCM_c(rev=Revision.REV_1, strain_rate_max=100)
     
     assert isinstance(dif_t, np.ndarray)
     assert isinstance(dif_c, np.ndarray)
