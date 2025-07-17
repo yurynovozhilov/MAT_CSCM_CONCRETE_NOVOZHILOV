@@ -353,6 +353,44 @@ class MatCSCM:
             
             RCurve = np.vstack((beta_hat, RScale))
             return RCurve
+        
+        def f(self, I_1, J_2, kappa, kappa_0, rev=Revision.REV_3):
+            """
+            General yield function f = F_f(I_1) * F_c(I_1, J_2, kappa) - kappa.
+            
+            This function combines the shear failure surface F_f and the cap 
+            failure surface F_c to define the overall yield criterion for the 
+            CSCM model.
+            
+            Parameters:
+            -----------
+            I_1 : array_like
+                First stress invariant (I1)
+            J_2 : array_like
+                Second stress invariant (J2)
+            kappa : array_like
+                Hardening parameter that controls cap expansion/contraction
+            kappa_0 : float
+                Initial value of kappa at the intersection of cap and shear surfaces
+            rev : Revision
+                Revision number (REV_1, REV_2, or REV_3)
+                
+            Returns:
+            --------
+            array_like
+                Yield function value. f < 0: elastic, f = 0: yield, f > 0: inadmissible
+            """
+            # Calculate shear failure surface F_f(I_1)
+            F_f_value = self.F_f(I_1, rev)
+            
+            # Calculate cap failure surface F_c(I_1, kappa, kappa_0)
+            # Access cap surface through parent object
+            F_c_value = self.parent.cap_surface.F_c(I_1, kappa, kappa_0, rev)
+            
+            # General yield function: f = F_f * F_c - kappa
+            yield_function = F_f_value * F_c_value - kappa
+            
+            return yield_function
     
     
     class CapSurface:
@@ -441,10 +479,9 @@ class MatCSCM:
             of the cap and shear surfaces before hardening 
             is engaged (before the cap moves).
             """
-            if kappa > kappa_0:
-                return kappa
-            else:
-                return kappa_0
+            # Handle both scalar and array inputs
+            kappa = np.asarray(kappa)
+            return np.maximum(kappa, kappa_0)
         
         def X(self, I, kappa, kappa_0, rev=Revision.REV_3):
             """
@@ -460,14 +497,17 @@ class MatCSCM:
             kappa is a hardening parameter that causes the cap 
             surface to move (expand or contract).
             """
+            # Ensure inputs are arrays
+            I = np.asarray(I)
+            kappa = np.asarray(kappa)
+            
             result = (I - self.L(kappa, kappa_0))
-            result *= (abs(result) + result)
+            result *= (np.abs(result) + result)
             result /= (2 * pow(self.X0(rev), 2))
             result = 1 - result
             
-            for i, value in enumerate(result):
-                if value < 0:
-                    result[i] = 0
+            # Clip negative values to zero
+            result = np.maximum(result, 0)
             return result
         
         def epsilon_v_p(self, X, rev=Revision.REV_3):
@@ -482,6 +522,59 @@ class MatCSCM:
             """Hydrostatic compression parameters."""
             return (self.D_1(rev) * (X - self.X0(rev)) + 
                     self.D_2(rev) * pow(X - self.X0(rev), 2))
+        
+        def kappa(self, delta_epsilon_p, epsilon_v_p_old, kappa_0, rev=Revision.REV_3):
+            """
+            Calculate new kappa value based on plastic strain increment.
+            
+            This function implements the cap hardening algorithm that updates the 
+            position of the cap surface based on plastic volumetric strain evolution.
+            
+            Parameters:
+            -----------
+            delta_epsilon_p : float
+                Plastic strain increment
+            epsilon_v_p_old : float
+                Previous plastic volumetric strain
+            kappa_0 : float
+                Initial kappa value (cap cannot shrink below this value)
+            rev : Revision
+                Revision number (REV_1, REV_2, or REV_3)
+                
+            Returns:
+            --------
+            tuple
+                (kappa_new, epsilon_v_p_new) - Updated kappa and plastic volumetric strain
+            """
+            # Get material parameters
+            nu = self.parent.ceb_data['nu']  # Poisson's ratio
+            W = self.W(rev)                  # Maximum plastic volume strain
+            D1 = self.D_1(rev)              # D1 parameter
+            D2 = self.D_2(rev)              # D2 parameter
+            X0 = self.X0(rev)               # Initial cap position
+            R = self.R(rev)                 # Ellipticity ratio
+            
+            # Step 1: Calculate plastic volumetric strain increment
+            # Account for dilatancy during compression
+            delta_epsilon_v_p = delta_epsilon_p * (1 - 2 * nu)
+            
+            # Step 2: Update total plastic volumetric strain
+            epsilon_v_p_new = epsilon_v_p_old + delta_epsilon_v_p
+            
+            # Step 3: Normalize plastic volumetric strain
+            epsilon_v_p_norm = abs(epsilon_v_p_new) / W
+            
+            # Step 4: Calculate new cap position
+            exp_term = np.exp(-D1 * epsilon_v_p_norm - D2 * epsilon_v_p_norm**2)
+            X_new = X0 + epsilon_v_p_norm * (1 - exp_term)
+            
+            # Step 5: Calculate new kappa through inverse relationship
+            kappa_new = (X_new + R**2 * kappa_0) / (1 + R**2)
+            
+            # Cap cannot shrink below initial position
+            kappa_new = max(kappa_new, kappa_0)
+            
+            return kappa_new, epsilon_v_p_new
     
     
     class Damage:
