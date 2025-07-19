@@ -1,4 +1,5 @@
 import numpy as np
+from theory import G, K, nu
 
 def DIF_c(f_c):
     f_co = 10
@@ -46,7 +47,7 @@ def DIF_t(f_c):
     DIFCurve = np.vstack((strainRate, DIF))   
     return DIFCurve  
 
-def sigma_elastic(f_c, strain, d_max=16.0, delta_f=8.0):
+def sigma_elastic(f_c, strain):
     """
     Calculate elastic stress using Hooke's law with elastic modulus from CEB data
     
@@ -65,8 +66,7 @@ def sigma_elastic(f_c, strain, d_max=16.0, delta_f=8.0):
         Elastic stress values (sigma_elastic = strain * E)
     """
     # Get CEB data including elastic modulus
-    ceb_data = CEB(f_c=f_c, d_max=d_max, delta_f=delta_f)
-    E = ceb_data['E']
+    E = CEB(f_c=f_c)['E']
     
     return strain * E
 
@@ -151,21 +151,7 @@ def CEB(f_c = 40, d_max = 16.0, rho = 2.4E-9, curve_array_size = 100, delta_f = 
     E_c = alpha_i*E_ci                               
     E = E_ci
     
-    ################################################
-    # 5.1.7.3 Poisson’s ratio
-    ################################################
-    # Poisson ratio for stresses -0.6*f_ck < sigma <0.8*f_ctk
-    nu = 0.2          
     
-    ################################################
-    # Other modulus for elastic stat
-    ################################################
-    
-    # Shear modulus
-    G = E/(2.*(1+nu)) 
-    
-    # Bulk modulus
-    K = E/(3.*(1-2.*nu))       
     
     ################################################
     # 5.1.8 Stress-strain relations for short-term loading
@@ -288,12 +274,12 @@ def CEB(f_c = 40, d_max = 16.0, rho = 2.4E-9, curve_array_size = 100, delta_f = 
     data['G_fs']  = G_fs     
     data['d_max'] = d_max
     data['rho']   = rho 
-    data['nu']    = nu     
+    data['nu']    = nu(f_c)     
     data['E']     = E 
     data['E_ci']  = E_ci
     data['E_c1']  = E_c1
-    data['G']     = G       
-    data['K']     = K 
+    data['G']     = E / (2*(1+nu(f_c)))       
+    data['K']     = E / (3*(1-2*nu(f_c))) 
     data['WF']    = WF
     data['epsilon_c1'] = epsilon_c1
     data['k']     = k
