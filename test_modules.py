@@ -107,18 +107,8 @@ def test_notebook_functions():
         # Create MatCSCM instance
         mat = MatCSCM(f_c=40)
         
-        # Fixed functions from notebook using MatCSCM
-        def Q1MC(mat, I, rev=Revision.REV_1):
-            q2 = mat.yield_surface.Q_2(I, rev)
-            return np.sqrt(3)*q2/(1+q2)
-
-        def Q2MC(mat, I, rev=Revision.REV_1):
-            return mat.yield_surface.TXE(I, rev)/mat.yield_surface.TXC(I, rev)
-
-        def Q1WW(mat, I, rev=Revision.REV_1):
-            q2 = mat.yield_surface.Q_2(I, rev)
-            q=(1-pow(q2,2))
-            return (np.sqrt(3)*q+(2*q2-1)*np.sqrt((3*q)+5*pow(q2,2)-4*q2))/(3*q+pow(1-2*q2,2))
+        # Import yield surface functions from dedicated module
+        from yield_functions import Q1MC, Q2MC, Q1WW
         
         I = np.array([0, 10, 20])
         

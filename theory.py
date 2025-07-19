@@ -22,8 +22,9 @@ class Theory:
         float
             Shear modulus G (MPa)
         """ 
-        from CEB import CEB
-        E = CEB(f_c=f_c)['E']
+        from CEB import CEBClass
+        ceb = CEBClass(f_c=f_c)
+        E = ceb.E
         nu_value = Theory.nu(f_c)
         return E / (2*(1+nu_value))
 
@@ -40,8 +41,9 @@ class Theory:
         float
             Bulk modulus K (MPa)
         """ 
-        from CEB import CEB
-        E = CEB(f_c=f_c)['E']
+        from CEB import CEBClass
+        ceb = CEBClass(f_c=f_c)
+        E = ceb.E
         nu_value = Theory.nu(f_c)
         return E / (3*(1-2*nu_value)) 
 

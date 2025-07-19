@@ -174,20 +174,22 @@ def test_ceb_integration():
     
     # Check that CEB data is properly loaded
     ceb_data = mat.ceb_data
-    assert isinstance(ceb_data, dict)
+    from CEB import CEBClass
+    assert isinstance(ceb_data, CEBClass)
     
     # Check essential properties
-    required_keys = ['f_c', 'f_t', 'E', 'G', 'K', 'G_ft', 'G_fc', 'G_fs']
-    for key in required_keys:
-        assert key in ceb_data
-        assert isinstance(ceb_data[key], (int, float, np.number))
+    required_properties = ['f_c', 'f_t', 'E', 'G', 'K', 'G_ft', 'G_fc', 'G_fs']
+    for prop in required_properties:
+        assert hasattr(ceb_data, prop)
+        value = getattr(ceb_data, prop)
+        assert isinstance(value, (int, float, np.number))
     
     # Check that values are reasonable
-    assert ceb_data['f_c'] == 35.0
-    assert ceb_data['f_t'] > 0
-    assert ceb_data['E'] > 0
-    assert ceb_data['G'] > 0
-    assert ceb_data['K'] > 0
+    assert ceb_data.f_c == 35.0
+    assert ceb_data.f_t > 0
+    assert ceb_data.E > 0
+    assert ceb_data.G > 0
+    assert ceb_data.K > 0
     
     print("✓ CEB integration successful")
 

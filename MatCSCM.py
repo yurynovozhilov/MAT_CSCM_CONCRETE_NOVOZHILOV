@@ -1,6 +1,6 @@
 import numpy as np
 from enum import Enum
-from CEB import CEB
+from CEB import CEBClass
 
 
 class Revision(Enum):
@@ -85,7 +85,7 @@ class MatCSCM:
         self.esize = 200
         
         # Get CEB material properties
-        self.ceb_data = CEB(f_c=f_c, d_max=dmax)
+        self.ceb_data = CEBClass(f_c=f_c, d_max=dmax)
         
         # Initialize nested classes
         self.yield_surface = self.YieldSurface(self)
@@ -547,7 +547,7 @@ class MatCSCM:
                 (kappa_new, epsilon_v_p_new) - Updated kappa and plastic volumetric strain
             """
             # Get material parameters
-            nu = self.parent.ceb_data['nu']  # Poisson's ratio
+            nu = self.parent.ceb_data.nu  # Poisson's ratio
             W = self.W(rev)                  # Maximum plastic volume strain
             D1 = self.D_1(rev)              # D1 parameter
             D2 = self.D_2(rev)              # D2 parameter
@@ -586,8 +586,8 @@ class MatCSCM:
         def B(self, rev=Revision.REV_1):
             """Ductile shape softening parameter."""
             f_c = self.parent.f_c
-            E = self.parent.ceb_data['E']
-            G_f_c = self.parent.ceb_data['G_fc']
+            E = self.parent.ceb_data.E
+            G_f_c = self.parent.ceb_data.G_fc
             l = self.parent.esize
             
             match rev:
@@ -605,9 +605,9 @@ class MatCSCM:
         
         def D(self, rev=Revision.REV_1):
             """Brittle shape softening parameter."""
-            f_t = self.parent.ceb_data['f_t']
-            E = self.parent.ceb_data['E']
-            G_ft = self.parent.ceb_data['G_ft']
+            f_t = self.parent.ceb_data.f_t
+            E = self.parent.ceb_data.E
+            G_ft = self.parent.ceb_data.G_ft
             l = self.parent.esize
             
             match rev:
@@ -727,8 +727,8 @@ class MatCSCM:
         
         def DIF_CSCM_t(self, rev=Revision.REV_1, strain_rate_max=1000):
             """Dynamic Increase Factor for tension."""
-            f_t = self.parent.ceb_data['f_t']
-            E = self.parent.ceb_data['E']
+            f_t = self.parent.ceb_data.f_t
+            E = self.parent.ceb_data.E
             over_tension = self.overt(rev)
             
             strain_rate_static = 30.0E-6
@@ -748,7 +748,7 @@ class MatCSCM:
         def DIF_CSCM_c(self, rev=Revision.REV_1, strain_rate_max=1000):
             """Dynamic Increase Factor for compression."""
             f_c = self.parent.f_c
-            E = self.parent.ceb_data['E']
+            E = self.parent.ceb_data.E
             over_compression = self.overc(rev)
             
             strain_rate_static = 30.0E-6
@@ -775,7 +775,9 @@ class MatCSCM:
         dict
             Dictionary containing all material parameters for LS-DYNA keyword generation
         """
-        data = self.ceb_data
+        # Convert CEB class to dictionary for compatibility
+        from CEB import CEB
+        data = CEB(f_c=self.f_c, d_max=self.dmax, rho=self.rho)
         
         CSCM = {}
         CSCM['NAME'] = '*MAT_CSCM'
@@ -851,7 +853,9 @@ class MatCSCM:
         str
             Formatted text with CEB-FIP estimations
         """
-        items = self.ceb_data
+        # Convert CEB class to dictionary for compatibility
+        from CEB import CEB
+        items = CEB(f_c=self.f_c, d_max=self.dmax, rho=self.rho)
         text = '$#\n'
         text += '$# CEBFIP Estimations:\n'
         for key in items:
