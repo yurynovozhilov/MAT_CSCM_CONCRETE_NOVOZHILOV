@@ -46,6 +46,30 @@ def DIF_t(f_c):
     DIFCurve = np.vstack((strainRate, DIF))   
     return DIFCurve  
 
+def sigma_elastic(f_c, strain, d_max=16.0, delta_f=8.0):
+    """
+    Calculate elastic stress using Hooke's law with elastic modulus from CEB data
+    
+    Parameters:
+    f_c : float
+        Characteristic compressive strength of concrete (MPa)
+    strain : float or array-like
+        Strain values
+    d_max : float, optional
+        Maximum aggregate size (mm) (default: 16.0)
+    delta_f : float, optional
+        Difference between mean and characteristic strength (default: 8.0 MPa)
+        
+    Returns:
+    float or array-like
+        Elastic stress values (sigma_elastic = strain * E)
+    """
+    # Get CEB data including elastic modulus
+    ceb_data = CEB(f_c=f_c, d_max=d_max, delta_f=delta_f)
+    E = ceb_data['E']
+    
+    return strain * E
+
 def CEB(f_c = 40, d_max = 16.0, rho = 2.4E-9, curve_array_size = 100, delta_f = 8.):
     ################################################
     # 5.1.4 Compressive strength The
