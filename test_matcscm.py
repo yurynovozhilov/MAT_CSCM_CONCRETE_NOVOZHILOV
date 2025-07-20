@@ -61,8 +61,8 @@ def test_nested_classes():
     print("✓ YieldSurface class working")
     
     # Test CapSurface class
-    X0 = mat.cap_surface.X0(rev=Revision.REV_2)
-    assert isinstance(X0, (int, float, np.number))
+    kappa_0 = mat.cap_surface.kappa_0(rev=Revision.REV_2)
+    assert isinstance(kappa_0, (int, float, np.number))
     print("✓ CapSurface class working")
     
     # Test Damage class

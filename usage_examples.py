@@ -44,7 +44,7 @@ def advanced_usage_example():
     
     print("\n1. Access to nested class methods:")
     print(f"   Yield surface alpha: {mat.yield_surface.alpha(Revision.REV_2):.6f}")
-    print(f"   Cap surface X0: {mat.cap_surface.X0(Revision.REV_2):.6f}")
+    print(f"   Cap surface kappa_0: {mat.cap_surface.kappa_0(Revision.REV_2):.6f}")
     print(f"   Damage parameter B: {mat.damage.B(Revision.REV_1):.6f}")
     print(f"   Strain rate n_t: {mat.strain_rate.n_t(Revision.REV_1):.6f}")
     

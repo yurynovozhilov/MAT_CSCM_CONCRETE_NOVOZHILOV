@@ -34,7 +34,7 @@ def main():
     print(f"Theta (rev=2): {mat.yield_surface.theta(Revision.REV_2):.6f}")
     
     print("\nAccessing cap surface parameters:")
-    print(f"X0 (rev=2): {mat.cap_surface.X0(Revision.REV_2):.6f}")
+    print(f"kappa_0 (rev=2): {mat.cap_surface.kappa_0(Revision.REV_2):.6f}")
     print(f"R (rev=2): {mat.cap_surface.R(Revision.REV_2):.6f}")
     print(f"W (rev=2): {mat.cap_surface.W(Revision.REV_2):.6f}")
     

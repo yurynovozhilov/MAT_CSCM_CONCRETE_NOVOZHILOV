@@ -120,13 +120,13 @@ def test_cap_surface_parameters():
         cs = material.cap_surface
         
         print("Cap Surface Parameters (REV_3):")
-        X0 = cs.X0(Revision.REV_3)
+        kappa_0 = cs.kappa_0(Revision.REV_3)
         R = cs.R(Revision.REV_3)
         W = cs.W(Revision.REV_3)
         D1 = cs.D_1(Revision.REV_3)
         D2 = cs.D_2(Revision.REV_3)
         
-        print(f"  - X0 (initial cap position): {X0:.6f}")
+        print(f"  - kappa_0 (initial cap position): {kappa_0:.6f}")
         print(f"  - R (ellipticity ratio): {R:.6f}")
         print(f"  - W (max plastic volume strain): {W:.6f}")
         print(f"  - D1: {D1:.6e}")
@@ -308,12 +308,12 @@ def test_revision_compatibility():
             print(f"\n{rev.name}:")
             try:
                 alpha = ys.alpha(rev)
-                X0 = cs.X0(rev)
+                kappa_0 = cs.kappa_0(rev)
                 R = cs.R(rev)
                 W = cs.W(rev)
                 
                 print(f"  - alpha: {alpha:.6f}")
-                print(f"  - X0: {X0:.6f}")
+                print(f"  - kappa_0: {kappa_0:.6f}")
                 print(f"  - R: {R:.6f}")
                 print(f"  - W: {W:.6f}")
                 

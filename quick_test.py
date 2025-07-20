@@ -19,8 +19,8 @@ def main():
     print(f"✓ TXC calculated: {txc}")
     
     # Test cap surface
-    X0 = material.cap_surface.X0(Revision.REV_3)
-    print(f"✓ X0 calculated: {X0}")
+    kappa_0 = material.cap_surface.kappa_0(Revision.REV_3)
+    print(f"✓ kappa_0 calculated: {kappa_0}")
     
     # Test new kappa function
     kappa_new, eps_new = material.cap_surface.kappa(0.001, 0.0, 10.0, Revision.REV_3)

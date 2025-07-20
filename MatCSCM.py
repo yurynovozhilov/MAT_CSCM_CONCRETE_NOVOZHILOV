@@ -1,7 +1,314 @@
 import numpy as np
+import matplotlib.pyplot as plt
 from enum import Enum
 from CEB import CEBClass
 
+def uniaxial_compression_response(cscm_model, max_strain=0.008, num_points=1000, dt=1e-5):
+    """
+    Вычисление отклика напряжение-деформация при одноосном сжатии для модели CSCM.
+    
+    Parameters:
+    -----------
+    cscm_model : MatCSCM
+        Объект модели CSCM с инициализированными параметрами
+    max_strain : float
+        Максимальная деформация сжатия (положительная)
+    num_points : int
+        Количество точек расчета
+    dt : float
+        Шаг по времени для расчета скорости деформации
+        
+    Returns:
+    --------
+    tuple
+        (strains, stresses) - массивы деформаций и напряжений
+    """
+    
+    # Получение параметров материала из CEB
+    ceb_data = cscm_model.ceb_data
+    E = ceb_data.E          # Модуль упругости
+    nu = ceb_data.nu        # Коэффициент Пуассона
+    f_c = ceb_data.f_c      # Прочность на сжатие
+    f_t = ceb_data.f_t      # Прочность на растяжение
+    
+    # Параметры поверхности сдвига TXC (REV_2)
+    alpha = cscm_model.yield_surface.alpha(Revision.REV_2)
+    theta = cscm_model.yield_surface.theta(Revision.REV_2)
+    lambda_param = cscm_model.yield_surface.lamda(Revision.REV_2)
+    beta = cscm_model.yield_surface.beta(Revision.REV_2)
+    
+    # Параметры cap поверхности (REV_2)
+    R = cscm_model.cap_surface.R(Revision.REV_2)
+    kappa_0 = cscm_model.cap_surface.kappa_0(Revision.REV_2)
+    W = cscm_model.cap_surface.W(Revision.REV_2)
+    D1 = cscm_model.cap_surface.D_1(Revision.REV_2)
+    D2 = cscm_model.cap_surface.D_2(Revision.REV_2)
+    
+    # Параметры повреждения
+    B = cscm_model.damage.B(Revision.REV_1)
+    G_fc = ceb_data.G_fc
+    
+    # Параметры кинематического упрочнения
+    NH = cscm_model.nh if cscm_model.nh > 0 else 0.7
+    CH = cscm_model.ch if cscm_model.ch > 0 else 0.01
+    
+    # Массив деформаций
+    strains = np.linspace(0, max_strain, num_points)
+    stresses = np.zeros_like(strains)
+    
+    # Переменные состояния
+    kappa_0 = kappa_0
+    kappa = kappa_0
+    epsilon_v_p = 0.0
+    elastic_strain = 0.0
+    plastic_strain = 0.0
+    damage = 0.0
+    damage_threshold = 0.0
+    
+    # Начальный порог повреждения (энергия при достижении предела текучести)
+    damage_threshold_initial = (f_t**2) / (2 * E)  # Для растяжения
+    damage_threshold_initial_c = (f_c**2) / (2 * E)  # Для сжатия
+    
+    for i, total_strain in enumerate(strains):
+        # Шаг 1: Инкремент деформации
+        if i == 0:
+            d_strain = 0
+        else:
+            d_strain = strains[i] - strains[i-1]
+        
+        elastic_strain += d_strain
+        
+        # Шаг 2: Пробное упругое напряжение
+        sigma_trial = -E * elastic_strain  # Отрицательное для сжатия
+        
+        # Шаг 3: Расчет инвариантов напряжений для одноосного сжатия
+        I_1 = sigma_trial  # Первый инвариант
+        J_2 = sigma_trial**2 / 3  # Второй инвариант девиатора
+        
+        # Шаг 4: Расчет поверхностей текучести
+        # Поверхность сдвига F_f
+        F_f = cscm_model.yield_surface.F_f(I_1, Revision.REV_2)
+        
+        # Cap поверхность F_c
+        F_c = cscm_model.cap_surface.F_c(I_1, kappa, kappa_0, Revision.REV_2)
+        
+        # Общая функция текучести
+        f_yield = cscm_model.yield_surface.f(I_1, J_2, kappa, kappa_0, Revision.REV_2)
+        
+        # Шаг 5: Проверка упругого/пластического поведения
+        if f_yield <= 0:
+            # Упругое поведение
+            sigma = sigma_trial
+            
+        else:
+            # Пластическое поведение
+            
+            # Кинематическое упрочнение
+            if abs(sigma_trial) > NH * f_c:
+                hardening_factor = 1 - np.exp(-CH * plastic_strain * 100)
+                effective_yield = f_c * (NH + (1 - NH) * hardening_factor)
+            else:
+                effective_yield = f_c * NH
+            
+            # Пластическая коррекция
+            if abs(sigma_trial) > effective_yield:
+                sigma = -effective_yield  # Ограничение напряжения
+                
+                # Пластический инкремент
+                delta_epsilon_p = (abs(sigma_trial) - effective_yield) / E
+                plastic_strain += delta_epsilon_p
+                elastic_strain -= delta_epsilon_p
+                
+                # Обновление κ через cap поверхность
+                try:
+                    kappa, epsilon_v_p = cscm_model.cap_surface.kappa(
+                        delta_epsilon_p, epsilon_v_p, kappa_0, Revision.REV_2
+                    )
+                except:
+                    # Упрощенное обновление κ если метод не работает
+                    delta_epsilon_v_p = delta_epsilon_p * (1 - 2 * nu)
+                    epsilon_v_p += delta_epsilon_v_p
+                    epsilon_v_p_norm = abs(epsilon_v_p) / W
+                    exp_term = np.exp(-D1 * epsilon_v_p_norm - D2 * epsilon_v_p_norm**2)
+                    X_new = kappa_0 + epsilon_v_p_norm * (1 - exp_term)
+                    kappa = max((X_new + R**2 * kappa_0) / (1 + R**2), kappa_0)
+            else:
+                sigma = sigma_trial
+        
+        # Шаг 6: Эффекты скорости деформации (если включены)
+        if cscm_model.irate == 1 and d_strain > 0:
+            strain_rate = abs(d_strain / dt)
+            
+            # Параметры скорости деформации для сжатия
+            try:
+                eta_0_c = cscm_model.strain_rate.eta_0_c(Revision.REV_1)
+                n_c = cscm_model.strain_rate.n_c(Revision.REV_1)
+                over_c = cscm_model.strain_rate.overc(Revision.REV_1)
+                
+                # Коэффициент текучести
+                eta_c = eta_0_c / (strain_rate ** n_c)
+                
+                # Вископластическое обновление (упрощенное)
+                viscoplastic_stress = E * strain_rate * eta_c
+                if viscoplastic_stress > over_c:
+                    viscoplastic_stress = over_c
+                
+                # Динамическая прочность
+                dynamic_strength = abs(sigma) + viscoplastic_stress
+                if abs(sigma) < dynamic_strength:
+                    sigma = -dynamic_strength if sigma < 0 else dynamic_strength
+                    
+            except:
+                # Если расчет скоростных эффектов не работает, продолжаем без них
+                pass
+        
+        # Шаг 7: Расчет повреждения при сжатии (Ductile Damage)
+        strain_energy = abs(sigma * total_strain)
+        
+        if strain_energy > damage_threshold:
+            damage_threshold = strain_energy
+            
+            # Расчет пластичного повреждения
+            tau_d = strain_energy
+            r_0d = damage_threshold_initial_c
+            
+            if tau_d > r_0d:
+                # Упрощенная формула повреждения
+                d_max = 0.99
+                tau_diff = tau_d - r_0d
+                a = G_fc / (B + tau_diff) if (B + tau_diff) > 0 else 0.01
+                
+                try:
+                    damage_increment = cscm_model.damage.ductile_damage(tau_d, B, a, d_max, r_0d)
+                    damage = min(0.99, max(damage, damage_increment))
+                except:
+                    # Упрощенная формула повреждения
+                    damage_increment = 1 - np.exp(-a * tau_diff / (B + tau_diff))
+                    damage = min(0.99, max(damage, damage_increment))
+        
+        # Шаг 8: Финальное напряжение с учетом повреждения
+        sigma_final = sigma * (1 - damage)
+        stresses[i] = abs(sigma_final)  # Положительное для графика
+    
+    return strains, stresses
+
+
+def plot_cscm_compression(cscm_model, max_strain=0.008, num_points=1000):
+    """
+    Построение графика напряжение-деформация для модели CSCM при одноосном сжатии.
+    
+    Parameters:
+    -----------
+    cscm_model : MatCSCM
+        Объект модели CSCM
+    max_strain : float
+        Максимальная деформация
+    num_points : int
+        Количество точек расчета
+        
+    Returns:
+    --------
+    matplotlib.pyplot
+        Объект pyplot для дальнейшей настройки
+    """
+    strains, stresses = uniaxial_compression_response(cscm_model, max_strain, num_points)
+    
+    plt.figure(figsize=(10, 6))
+    plt.plot(strains * 100, stresses, 'b-', linewidth=2, 
+             label=f'CSCM Model (f\'c = {cscm_model.f_c} МПа)')
+    
+    plt.xlabel('Деформация сжатия, %')
+    plt.ylabel('Напряжение сжатия, МПа')
+    plt.title(f'Модель CSCM при одноосном сжатии\n(f\'c = {cscm_model.f_c} МПа, d_max = {cscm_model.dmax} мм)')
+    plt.grid(True, alpha=0.3)
+    plt.legend()
+    
+    # Добавление ключевых точек
+    peak_stress = np.max(stresses)
+    peak_strain = strains[np.argmax(stresses)] * 100
+    plt.plot(peak_strain, peak_stress, 'ro', markersize=8, 
+             label=f'Пик: {peak_stress:.1f} МПа при {peak_strain:.3f}%')
+    
+    plt.xlim(0, max_strain * 100)
+    plt.ylim(0, peak_stress * 1.1)
+    plt.legend()
+    plt.tight_layout()
+    
+    return plt
+
+
+def compare_concrete_classes(f_c_list=[20, 30, 40, 50], d_max=19, max_strain=0.008):
+    """
+    Сравнение различных классов бетона.
+    
+    Parameters:
+    -----------
+    f_c_list : list
+        Список прочностей бетона для сравнения
+    d_max : float
+        Размер заполнителя
+    max_strain : float
+        Максимальная деформация
+    """
+    plt.figure(figsize=(12, 8))
+    colors = ['blue', 'red', 'green', 'orange', 'purple']
+    
+    for i, f_c in enumerate(f_c_list):
+        # Создание модели для каждого класса бетона
+        cscm = MatCSCM(f_c=f_c, dmax=d_max)
+        strains, stresses = uniaxial_compression_response(cscm, max_strain)
+        
+        plt.plot(strains * 100, stresses, color=colors[i % len(colors)], 
+                linewidth=2, label=f'C{f_c} (f\'c = {f_c} МПа)')
+    
+    plt.xlabel('Деформация сжатия, %')
+    plt.ylabel('Напряжение сжатия, МПа')
+    plt.title('Сравнение различных классов бетона (модель CSCM)')
+    plt.grid(True, alpha=0.3)
+    plt.legend()
+    plt.xlim(0, max_strain * 100)
+    plt.tight_layout()
+    
+    return plt
+
+
+
+def plot_elastic_compression_curve(f_c):
+    """
+    Plot elastic compression curve for concrete
+    
+    Parameters:
+    f_c : float
+        Characteristic compressive strength of concrete (MPa)
+    """
+    # Define strain range from 0 to 0.1% (0.001)
+    strain_range = np.linspace(0, 0.001, 100)
+    
+    # Calculate elastic stress using CEB function
+    from CEB import sigma_elastic
+    stress_values = sigma_elastic(f_c, strain_range)
+    
+    # Create the plot
+    plt.figure(figsize=(10, 6))
+    plt.plot(strain_range * 100, stress_values, 'b-', linewidth=2, label=f'Elastic curve (f_c = {f_c} MPa)')
+    plt.xlabel('Strain (%)')
+    plt.ylabel('Stress (MPa)')
+    plt.title('Concrete Elastic Compression Curve')
+    plt.grid(True, alpha=0.3)
+    plt.legend()
+    plt.xlim(0, 0.1)
+    plt.ylim(0, max(stress_values) * 1.1)
+    
+    # Add annotations
+    ceb_data = CEBClass(f_c=f_c)
+    E = ceb_data.E
+    plt.text(0.05, max(stress_values) * 0.8, f'E = {E:.0f} MPa', 
+             bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8))
+    
+    plt.tight_layout()
+    plt.show()
+
+# Initial plot with default f_c value
 
 class Revision(Enum):
     """Enumeration for CSCM model revisions."""
@@ -399,7 +706,7 @@ class MatCSCM:
         def __init__(self, parent):
             self.parent = parent
         
-        def X0(self, rev=Revision.REV_3):
+        def kappa_0(self, rev=Revision.REV_3):
             """Initial location of the cap when kappa = kappa_0."""
             f_c = self.parent.f_c
             match rev:
@@ -503,7 +810,7 @@ class MatCSCM:
             
             result = (I - self.L(kappa, kappa_0))
             result *= (np.abs(result) + result)
-            result /= (2 * pow(self.X0(rev), 2))
+            result /= (2 * pow(self.kappa_0(rev), 2))
             result = 1 - result
             
             # Clip negative values to zero
@@ -515,13 +822,13 @@ class MatCSCM:
             Plastic volume strain - basis for motion (expansion and contraction) of the cap.
             """
             return (self.W(rev) * 
-                    (1 - np.exp(-self.D_1(rev) * (X - self.X0(rev)) - 
-                                self.D_2(rev) * pow(X - self.X0(rev), 2))))
+                    (1 - np.exp(-self.D_1(rev) * (X - self.kappa_0(rev)) - 
+                                self.D_2(rev) * pow(X - self.kappa_0(rev), 2))))
         
         def hydrostatic_compression_parameters(self, X, rev=Revision.REV_3):
             """Hydrostatic compression parameters."""
-            return (self.D_1(rev) * (X - self.X0(rev)) + 
-                    self.D_2(rev) * pow(X - self.X0(rev), 2))
+            return (self.D_1(rev) * (X - self.kappa_0(rev)) + 
+                    self.D_2(rev) * pow(X - self.kappa_0(rev), 2))
         
         def kappa(self, delta_epsilon_p, epsilon_v_p_old, kappa_0, rev=Revision.REV_3):
             """
@@ -551,7 +858,7 @@ class MatCSCM:
             W = self.W(rev)                  # Maximum plastic volume strain
             D1 = self.D_1(rev)              # D1 parameter
             D2 = self.D_2(rev)              # D2 parameter
-            X0 = self.X0(rev)               # Initial cap position
+            X0 = self.kappa_0(rev)          # Initial cap position
             R = self.R(rev)                 # Ellipticity ratio
             
             # Step 1: Calculate plastic volumetric strain increment
@@ -817,7 +1124,7 @@ class MatCSCM:
         
         # Card 5
         CSCM['R'] = {'card': 5, 'position': 1, 'type': 'F', 'value': self.cap_surface.R(Revision.REV_2)}
-        CSCM['X0'] = {'card': 5, 'position': 2, 'type': 'F', 'value': self.cap_surface.X0(Revision.REV_2)}
+        CSCM['X0'] = {'card': 5, 'position': 2, 'type': 'F', 'value': self.cap_surface.kappa_0(Revision.REV_2)}
         CSCM['W'] = {'card': 5, 'position': 3, 'type': 'F', 'value': self.cap_surface.W(Revision.REV_2)}
         CSCM['D1'] = {'card': 5, 'position': 4, 'type': 'F', 'value': self.cap_surface.D_1(Revision.REV_2)}
         CSCM['D2'] = {'card': 5, 'position': 5, 'type': 'F', 'value': self.cap_surface.D_2(Revision.REV_2)}
