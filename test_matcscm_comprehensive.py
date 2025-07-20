@@ -48,10 +48,10 @@ def test_ceb_integration():
         ceb_data = material.ceb_data
         
         print(f"✓ CEB data loaded successfully")
-        print(f"  - Poisson's ratio (nu): {ceb_data['nu']}")
-        print(f"  - Elastic modulus (E): {ceb_data['E']:.2f} MPa")
-        print(f"  - Tensile strength (f_t): {ceb_data['f_t']:.2f} MPa")
-        print(f"  - Fracture energy (G_ft): {ceb_data['G_ft']:.4f} N/mm")
+        print(f"  - Poisson's ratio (nu): {ceb_data.nu}")
+        print(f"  - Elastic modulus (E): {ceb_data.E:.2f} MPa")
+        print(f"  - Tensile strength (f_t): {ceb_data.f_t:.2f} MPa")
+        print(f"  - Fracture energy (G_ft): {ceb_data.G_ft:.4f} N/mm")
         
         return True
     except Exception as e:

@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from enum import Enum
 from CEB import CEBClass
 
-def uniaxial_compression_response(cscm_model, max_strain=0.008, num_points=1000, dt=1e-5):
+def uniaxial_compression_response(cscm_model, max_strain=0.01, num_points=1000, dt=1e-5):
     """
     Calculate stress-strain response for uniaxial compression using CSCM model.
     
@@ -90,7 +90,7 @@ def uniaxial_compression_response(cscm_model, max_strain=0.008, num_points=1000,
         F_f = cscm_model.yield_surface.F_f(I_1, Revision.REV_2)
         
         # Cap surface F_c
-        F_c = cscm_model.cap_surface.F_c(I_1, kappa, kappa_0, Revision.REV_2)
+        F_c = cscm_model.cap_surface.F_c(I_1, J_2, kappa, Revision.REV_2)
         
         # General yield function
         f_yield = cscm_model.yield_surface.f(I_1, J_2, kappa, kappa_0, Revision.REV_2)
@@ -135,32 +135,6 @@ def uniaxial_compression_response(cscm_model, max_strain=0.008, num_points=1000,
             else:
                 sigma = sigma_trial
         
-        # Step 6: Strain rate effects (if enabled)
-        if cscm_model.irate == 1 and d_strain > 0:
-            strain_rate = abs(d_strain / dt)
-            
-            # Strain rate parameters for compression
-            try:
-                eta_0_c = cscm_model.strain_rate.eta_0_c(Revision.REV_1)
-                n_c = cscm_model.strain_rate.n_c(Revision.REV_1)
-                over_c = cscm_model.strain_rate.overc(Revision.REV_1)
-                
-                # Viscosity coefficient
-                eta_c = eta_0_c / (strain_rate ** n_c)
-                
-                # Viscoplastic update (simplified)
-                viscoplastic_stress = E * strain_rate * eta_c
-                if viscoplastic_stress > over_c:
-                    viscoplastic_stress = over_c
-                
-                # Dynamic strength
-                dynamic_strength = abs(sigma) + viscoplastic_stress
-                if abs(sigma) < dynamic_strength:
-                    sigma = -dynamic_strength if sigma < 0 else dynamic_strength
-                    
-            except:
-                # If strain rate calculation fails, continue without rate effects
-                pass
         
         # Step 7: Compression damage calculation (Ductile Damage)
         strain_energy = abs(sigma * total_strain)
@@ -193,7 +167,7 @@ def uniaxial_compression_response(cscm_model, max_strain=0.008, num_points=1000,
     return strains, stresses
 
 
-def plot_cscm_compression(cscm_model, max_strain=0.008, num_points=1000):
+def plot_cscm_compression(cscm_model, max_strain=0.01, num_points=1000):
     """
     Plot stress-strain diagram for CSCM model under uniaxial compression.
     
@@ -690,9 +664,9 @@ class MatCSCM:
             # Calculate shear failure surface F_f(I_1)
             F_f_value = self.F_f(I_1, rev)
             
-            # Calculate cap failure surface F_c(I_1, kappa, kappa_0)
+            # Calculate cap failure surface F_c(I_1, J_2, kappa)
             # Access cap surface through parent object
-            F_c_value = self.parent.cap_surface.F_c(I_1, kappa, kappa_0, rev)
+            F_c_value = self.parent.cap_surface.F_c(I_1, J_2, kappa, rev)
             
             # General yield function: f = F_f * F_c - kappa
             yield_function = F_f_value * F_c_value - kappa
@@ -798,22 +772,50 @@ class MatCSCM:
             return (self.L(kappa, kappa_0) + 
                     self.R(rev) * self.parent.yield_surface.F_f(self.L(kappa, kappa_0), rev))
         
-        def F_c(self, I, kappa, kappa_0, rev=Revision.REV_3):
+        def F_c(self, I_1, J_2, kappa, rev=Revision.REV_3):
             """
             Cap failure surface function F_c.
-            kappa is a hardening parameter that causes the cap 
-            surface to move (expand or contract).
+            
+            The cap surface is an elliptical surface in the I_1-sqrt(J_2) space
+            that represents the yield surface for hydrostatic compression.
+            
+            Parameters:
+            -----------
+            I_1 : array_like
+                First stress invariant
+            J_2 : array_like
+                Second deviatoric stress invariant
+            kappa : array_like
+                Hardening parameter that causes the cap surface to move (expand or contract)
+            rev : Revision
+                Model revision
+                
+            Returns:
+            --------
+            array_like
+                Cap surface function value
             """
+            kappa_0 = self.kappa_0(rev)
+            R = self.R(rev)
+            
             # Ensure inputs are arrays
-            I = np.asarray(I)
+            I_1 = np.asarray(I_1)
+            J_2 = np.asarray(J_2)
             kappa = np.asarray(kappa)
             
-            result = (I - self.L(kappa, kappa_0))
-            result *= (np.abs(result) + result)
-            result /= (2 * pow(self.kappa_0(rev), 2))
-            result = 1 - result
+            # Cap center position
+            L_kappa = self.L(kappa, kappa_0)
             
-            # Clip negative values to zero
+            # Elliptical cap surface equation:
+            # F_c = 1 - [(I_1 - L)^2 + R^2 * J_2] / kappa^2
+            # where L is the cap center and R is the cap aspect ratio
+            
+            term1 = np.power(I_1 - L_kappa, 2)
+            term2 = R**2 * J_2
+            
+            result = 1 - (term1 + term2) / np.power(kappa, 2)
+            
+            # Clip negative values to zero (outside cap surface)
             result = np.maximum(result, 0)
             return result
         
