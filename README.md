@@ -26,23 +26,31 @@ For detailed Binder setup information, see [docs/BINDER_SETUP.md](docs/BINDER_SE
 
 ## 🚀 Quick Start
 
-### Virtual Environment Activation
+### First Time Setup (After Cloning)
 ```bash
-# Activate environment (required!)
+# Run setup script to create virtual environment and install dependencies
+./setup.sh
+```
+
+### Daily Usage
+```bash
+# 1. Activate environment (required!)
 source activate.sh
-```
 
-### Launch Main Notebook
-```bash
-# Start Jupyter Notebook
-./run_jupyter.sh
-```
+# 2. Launch CSCM keyword generator
+./run_cscm.sh
 
-### Module Testing
-```bash
-# Test all modules
+# 3. Or test modules
 python test_modules.py
 ```
+
+### Why Setup is Needed
+Virtual environments (`venv312/`) are **not included in Git repositories** because they:
+- Contain platform-specific binary files
+- Are large (100-500 MB)
+- Should be created fresh for each system
+
+This is standard Python practice - every developer creates their own virtual environment.
 
 ## 📋 Requirements
 
