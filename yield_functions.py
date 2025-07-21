@@ -49,7 +49,7 @@ def Q1MC(mat, I, rev=Revision.REV_1):
     -----------
     Murray, Y.D. et al. (2007), Equation for Mohr-Coulomb yield criterion
     """
-    q2 = mat.yield_surface.Q_2(I, rev)
+    q2 = mat.evaluate.Q_2(I, rev)
     return np.sqrt(3) * q2 / (1 + q2)
 
 
@@ -85,7 +85,7 @@ def Q2MC(mat, I, rev=Revision.REV_1):
     -----------
     Murray, Y.D. et al. (2007), Equation for meridian ratio in Mohr-Coulomb criterion
     """
-    return mat.yield_surface.TXE(I, rev) / mat.yield_surface.TXC(I, rev)
+    return mat.evaluate.TXE(I, rev) / mat.initialize.TXC(I, rev)
 
 
 def Q1WW(mat, I, rev=Revision.REV_1):
@@ -122,7 +122,7 @@ def Q1WW(mat, I, rev=Revision.REV_1):
     Willam, K.J., Warnke, E.P. (1975), Constitutive model for the triaxial behavior of concrete
     Murray, Y.D. et al. (2007), Implementation of Willam-Warnke yield criterion in CSCM
     """
-    q2 = mat.yield_surface.Q_2(I, rev)
+    q2 = mat.evaluate.Q_2(I, rev)
     q = 1 - pow(q2, 2)
     
     numerator = (np.sqrt(3) * q + 
@@ -163,7 +163,7 @@ def TORMC(mat, I, rev=Revision.REV_1):
     -----------
     Murray, Y.D. et al. (2007), Torsional strength calculation for Mohr-Coulomb criterion
     """
-    return Q1MC(mat, I, rev) * mat.yield_surface.TXC(I, rev)
+    return Q1MC(mat, I, rev) * mat.initialize.TXC(I, rev)
 
 
 def TXEMC(mat, I, rev=Revision.REV_1):
@@ -197,7 +197,7 @@ def TXEMC(mat, I, rev=Revision.REV_1):
     -----------
     Murray, Y.D. et al. (2007), Tensile meridian strength for Mohr-Coulomb criterion
     """
-    return Q2MC(mat, I, rev) * mat.yield_surface.TXC(I, rev)
+    return Q2MC(mat, I, rev) * mat.initialize.TXC(I, rev)
 
 
 def TORWW(mat, I, rev=Revision.REV_1):
@@ -232,7 +232,7 @@ def TORWW(mat, I, rev=Revision.REV_1):
     Willam, K.J., Warnke, E.P. (1975), Constitutive model for the triaxial behavior of concrete
     Murray, Y.D. et al. (2007), Torsional strength calculation for Willam-Warnke criterion
     """
-    return Q1WW(mat, I, rev) * mat.yield_surface.TXC(I, rev)
+    return Q1WW(mat, I, rev) * mat.initialize.TXC(I, rev)
 
 
 # Backward compatibility functions (using old naming convention)

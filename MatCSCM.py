@@ -3,286 +3,7 @@ import matplotlib.pyplot as plt
 from enum import Enum
 from CEB import CEBClass
 
-def uniaxial_compression_response(cscm_model, max_strain=0.01, num_points=1000, dt=1e-5):
-    """
-    Calculate stress-strain response for uniaxial compression using CSCM model.
-    
-    Parameters:
-    -----------
-    cscm_model : MatCSCM
-        CSCM model object with initialized parameters
-    max_strain : float
-        Maximum compression strain (positive value)
-    num_points : int
-        Number of calculation points
-    dt : float
-        Time step for strain rate calculation
-        
-    Returns:
-    --------
-    tuple
-        (strains, stresses) - arrays of strains and stresses
-    """
-    
-    # Get material parameters from CEB
-    ceb_data = cscm_model.ceb_data
-    E = ceb_data.E          # Elastic modulus
-    nu = ceb_data.nu        # Poisson's ratio
-    f_c = ceb_data.f_c      # Compressive strength
-    f_t = ceb_data.f_t      # Tensile strength
-    
-    # Shear surface TXC parameters (REV_2)
-    alpha = cscm_model.yield_surface.alpha(Revision.REV_2)
-    theta = cscm_model.yield_surface.theta(Revision.REV_2)
-    lambda_param = cscm_model.yield_surface.lamda(Revision.REV_2)
-    beta = cscm_model.yield_surface.beta(Revision.REV_2)
-    
-    # Cap surface parameters (REV_2)
-    R = cscm_model.cap_surface.R(Revision.REV_2)
-    kappa_0 = cscm_model.cap_surface.kappa_0(Revision.REV_2)
-    W = cscm_model.cap_surface.W(Revision.REV_2)
-    D1 = cscm_model.cap_surface.D_1(Revision.REV_2)
-    D2 = cscm_model.cap_surface.D_2(Revision.REV_2)
-    
-    # Damage parameters
-    B = cscm_model.damage.B(Revision.REV_1)
-    G_fc = ceb_data.G_fc
-    
-    # Kinematic hardening parameters
-    NH = cscm_model.nh if cscm_model.nh > 0 else 0.7
-    CH = cscm_model.ch if cscm_model.ch > 0 else 0.01
-    
-    # Strain array
-    strains = np.linspace(0, max_strain, num_points)
-    stresses = np.zeros_like(strains)
-    
-    # State variables
-    kappa_0 = kappa_0
-    kappa = kappa_0
-    epsilon_v_p = 0.0
-    elastic_strain = 0.0
-    plastic_strain = 0.0
-    damage = 0.0
-    damage_threshold = 0.0
-    
-    # Initial damage threshold (energy at yield point)
-    damage_threshold_initial = (f_t**2) / (2 * E)  # For tension
-    damage_threshold_initial_c = (f_c**2) / (2 * E)  # For compression
-    
-    for i, total_strain in enumerate(strains):
-        # Step 1: Strain increment
-        if i == 0:
-            d_strain = 0
-        else:
-            d_strain = strains[i] - strains[i-1]
-        
-        elastic_strain += d_strain
-        
-        # Step 2: Trial elastic stress
-        sigma_trial = -E * elastic_strain  # Negative for compression
-        
-        # Step 3: Calculate stress invariants for uniaxial compression
-        I_1 = sigma_trial  # First invariant
-        J_2 = sigma_trial**2 / 3  # Second deviatoric invariant
-        
-        # Step 4: Calculate yield surfaces
-        # Shear surface F_f
-        F_f = cscm_model.yield_surface.F_f(I_1, Revision.REV_2)
-        
-        # Cap surface F_c
-        F_c = cscm_model.cap_surface.F_c(I_1, J_2, kappa, Revision.REV_2)
-        
-        # General yield function
-        f_yield = cscm_model.yield_surface.f(I_1, J_2, kappa, kappa_0, Revision.REV_2)
-        
-        # Step 5: Check elastic/plastic behavior
-        if f_yield <= 0:
-            # Elastic behavior
-            sigma = sigma_trial
-            
-        else:
-            # Plastic behavior
-            
-            # Kinematic hardening
-            if abs(sigma_trial) > NH * f_c:
-                hardening_factor = 1 - np.exp(-CH * plastic_strain * 100)
-                effective_yield = f_c * (NH + (1 - NH) * hardening_factor)
-            else:
-                effective_yield = f_c * NH
-            
-            # Plastic correction
-            if abs(sigma_trial) > effective_yield:
-                sigma = -effective_yield  # Stress limitation
-                
-                # Plastic increment
-                delta_epsilon_p = (abs(sigma_trial) - effective_yield) / E
-                plastic_strain += delta_epsilon_p
-                elastic_strain -= delta_epsilon_p
-                
-                # Update κ through cap surface
-                try:
-                    kappa, epsilon_v_p = cscm_model.cap_surface.kappa(
-                        delta_epsilon_p, epsilon_v_p, kappa_0, Revision.REV_2
-                    )
-                except:
-                    # Simplified κ update if method fails
-                    delta_epsilon_v_p = delta_epsilon_p * (1 - 2 * nu)
-                    epsilon_v_p += delta_epsilon_v_p
-                    epsilon_v_p_norm = abs(epsilon_v_p) / W
-                    exp_term = np.exp(-D1 * epsilon_v_p_norm - D2 * epsilon_v_p_norm**2)
-                    X_new = kappa_0 + epsilon_v_p_norm * (1 - exp_term)
-                    kappa = max((X_new + R**2 * kappa_0) / (1 + R**2), kappa_0)
-            else:
-                sigma = sigma_trial
-        
-        
-        # Step 7: Compression damage calculation (Ductile Damage)
-        strain_energy = abs(sigma * total_strain)
-        
-        if strain_energy > damage_threshold:
-            damage_threshold = strain_energy
-            
-            # Calculate ductile damage
-            tau_d = strain_energy
-            r_0d = damage_threshold_initial_c
-            
-            if tau_d > r_0d:
-                # Simplified damage formula
-                d_max = 0.99
-                tau_diff = tau_d - r_0d
-                a = G_fc / (B + tau_diff) if (B + tau_diff) > 0 else 0.01
-                
-                try:
-                    damage_increment = cscm_model.damage.ductile_damage(tau_d, B, a, d_max, r_0d)
-                    damage = min(0.99, max(damage, damage_increment))
-                except:
-                    # Simplified damage formula
-                    damage_increment = 1 - np.exp(-a * tau_diff / (B + tau_diff))
-                    damage = min(0.99, max(damage, damage_increment))
-        
-        # Step 8: Final stress with damage
-        sigma_final = sigma * (1 - damage)
-        stresses[i] = abs(sigma_final)  # Positive for plotting
-    
-    return strains, stresses
 
-
-def plot_cscm_compression(cscm_model, max_strain=0.01, num_points=1000):
-    """
-    Plot stress-strain diagram for CSCM model under uniaxial compression.
-    
-    Parameters:
-    -----------
-    cscm_model : MatCSCM
-        CSCM model object
-    max_strain : float
-        Maximum strain
-    num_points : int
-        Number of calculation points
-        
-    Returns:
-    --------
-    matplotlib.pyplot
-        pyplot object for further customization
-    """
-    strains, stresses = uniaxial_compression_response(cscm_model, max_strain, num_points)
-    
-    plt.figure(figsize=(10, 6))
-    plt.plot(strains * 100, stresses, 'b-', linewidth=2, 
-             label=f'CSCM Model (f\'c = {cscm_model.f_c} MPa)')
-    
-    plt.xlabel('Compression Strain, %')
-    plt.ylabel('Compression Stress, MPa')
-    plt.title(f'CSCM Model under Uniaxial Compression\n(f\'c = {cscm_model.f_c} MPa, d_max = {cscm_model.dmax} mm)')
-    plt.grid(True, alpha=0.3)
-    plt.legend()
-    
-    # Add key points
-    peak_stress = np.max(stresses)
-    peak_strain = strains[np.argmax(stresses)] * 100
-    plt.plot(peak_strain, peak_stress, 'ro', markersize=8, 
-             label=f'Peak: {peak_stress:.1f} MPa at {peak_strain:.3f}%')
-    
-    plt.xlim(0, max_strain * 100)
-    plt.ylim(0, peak_stress * 1.1)
-    plt.legend()
-    plt.tight_layout()
-    
-    return plt
-
-
-def compare_concrete_classes(f_c_list=[20, 30, 40, 50], d_max=19, max_strain=0.008):
-    """
-    Compare different concrete strength classes.
-    
-    Parameters:
-    -----------
-    f_c_list : list
-        List of concrete strengths for comparison
-    d_max : float
-        Aggregate size
-    max_strain : float
-        Maximum strain
-    """
-    plt.figure(figsize=(12, 8))
-    colors = ['blue', 'red', 'green', 'orange', 'purple']
-    
-    for i, f_c in enumerate(f_c_list):
-        # Create model for each concrete class
-        cscm = MatCSCM(f_c=f_c, dmax=d_max)
-        strains, stresses = uniaxial_compression_response(cscm, max_strain)
-        
-        plt.plot(strains * 100, stresses, color=colors[i % len(colors)], 
-                linewidth=2, label=f'C{f_c} (f\'c = {f_c} MPa)')
-    
-    plt.xlabel('Compression Strain, %')
-    plt.ylabel('Compression Stress, MPa')
-    plt.title('Comparison of Different Concrete Classes (CSCM Model)')
-    plt.grid(True, alpha=0.3)
-    plt.legend()
-    plt.xlim(0, max_strain * 100)
-    plt.tight_layout()
-    
-    return plt
-
-
-
-def plot_elastic_compression_curve(f_c):
-    """
-    Plot elastic compression curve for concrete
-    
-    Parameters:
-    f_c : float
-        Characteristic compressive strength of concrete (MPa)
-    """
-    # Define strain range from 0 to 0.1% (0.001)
-    strain_range = np.linspace(0, 0.001, 100)
-    
-    # Calculate elastic stress using CEB function
-    from CEB import sigma_elastic
-    stress_values = sigma_elastic(f_c, strain_range)
-    
-    # Create the plot
-    plt.figure(figsize=(10, 6))
-    plt.plot(strain_range * 100, stress_values, 'b-', linewidth=2, label=f'Elastic curve (f_c = {f_c} MPa)')
-    plt.xlabel('Strain (%)')
-    plt.ylabel('Stress (MPa)')
-    plt.title('Concrete Elastic Compression Curve')
-    plt.grid(True, alpha=0.3)
-    plt.legend()
-    plt.xlim(0, 0.1)
-    plt.ylim(0, max(stress_values) * 1.1)
-    
-    # Add annotations
-    ceb_data = CEBClass(f_c=f_c)
-    E = ceb_data.E
-    plt.text(0.05, max(stress_values) * 0.8, f'E = {E:.0f} MPa', 
-             bbox=dict(boxstyle='round', facecolor='wheat', alpha=0.8))
-    
-    plt.tight_layout()
-    plt.show()
-
-# Initial plot with default f_c value
 
 class Revision(Enum):
     """Enumeration for CSCM model revisions."""
@@ -290,60 +11,11 @@ class Revision(Enum):
     REV_2 = 2
     REV_3 = 3
 
-
 class MatCSCM:
-    """
-    Continuous Surface Cap Model (CSCM) for concrete material behavior.
-    
-    This class implements the CSCM material model for LS-DYNA, providing
-    methods for calculating yield surfaces, damage parameters, strain rate
-    effects, and generating material keywords.
-    """
-    
     def __init__(self, f_c=35, dmax=19, mid=159, rho=2.4E-9, nplot=1, 
-                 incre=0, irate='on', erode='off', recov='full', 
-                 itretrc=0, pred='off', repow=1, nh=0, ch=0, 
-                 pwrc=5, pwrt=1, pmod=0):
-        """
-        Initialize CSCM material model.
-        
-        Parameters:
-        -----------
-        f_c : float
-            Compressive strength (MPa)
-        dmax : float
-            Maximum aggregate size (mm)
-        mid : int
-            Material ID
-        rho : float
-            Density
-        nplot : int
-            Plot option (1-7)
-        incre : float
-            Maximum strain increment for subincrementation
-        irate : str
-            Rate effects model ('on'/'off')
-        erode : str
-            Erosion option ('off' or float value)
-        recov : str
-            Modulus recovery option ('full' or float value)
-        itretrc : int
-            Cap retraction option (0/1)
-        pred : str
-            Preexisting damage ('off' or float value)
-        repow : float
-            Power that increases fracture energy with rate effects
-        nh : float
-            Hardening initiation
-        ch : float
-            Hardening rate
-        pwrc : float
-            Shear-to-compression transition parameter
-        pwrt : float
-            Shear-to-tension transition parameter
-        pmod : float
-            Modify moderate pressure softening parameter
-        """
+             incre=0, irate='on', erode='off', recov='full', 
+             itretrc=0, pred='off', repow=1, nh=0, ch=0, 
+             pwrc=5, pwrt=1, pmod=0):
         self.f_c = f_c
         self.dmax = dmax
         self.mid = mid
@@ -369,41 +41,17 @@ class MatCSCM:
         self.ceb_data = CEBClass(f_c=f_c, d_max=dmax)
         
         # Initialize nested classes
-        self.yield_surface = self.YieldSurface(self)
-        self.damage = self.Damage(self)
-        self.strain_rate = self.StrainRate(self)
-        self.cap_surface = self.CapSurface(self)
-    
-    
-    class YieldSurface:
-        """Yield surface calculations for CSCM model."""
-        
+        self.initialize = self.Initialize(self)
+        self.evaluate = self.Evaluate(self)
+    class Initialize:
         def __init__(self, parent):
             self.parent = parent
-        
+            
         def P(self, A_p, B_p, C_p):
             """Polynomial function for parameter calculations."""
             f_c = self.parent.f_c
             return A_p * pow(f_c, 2) + B_p * f_c + C_p
-        
-        def F_f(self, I, rev=Revision.REV_3):
-            """
-            Shear surface F_f defined along the compression meridian TXC.
             
-            Parameters:
-            -----------
-            I : array_like
-                First stress invariant
-            rev : Revision
-                Revision number (REV_1, REV_2, or REV_3)
-            """
-            f_c = self.parent.f_c
-            result = self.alpha(rev)
-            result -= self.lamda(rev) * np.exp(-self.beta(rev) * I)
-            result += self.theta(rev) * I
-            return result
-        
-        # Compression meridian (TXC) parameters
         def alpha(self, rev=Revision.REV_3):
             """Alpha parameter for compression meridian."""
             f_c = self.parent.f_c
@@ -416,7 +64,7 @@ class MatCSCM:
                     return 2.5801E-03 * pow(f_c, 2) + 1.6405E-01 * f_c + 4.3506E-01
                 case _:
                     raise ValueError(f"Invalid revision number: {rev}")
-        
+            
         def lamda(self, rev=Revision.REV_3):
             """Lambda parameter for compression meridian."""
             f_c = self.parent.f_c
@@ -429,7 +77,7 @@ class MatCSCM:
                     return 3.0220E-03 * pow(f_c, 2.0231E+00)
                 case _:
                     raise ValueError(f"Invalid revision number: {rev}")
-        
+            
         def beta(self, rev=Revision.REV_3):
             """Beta parameter for compression meridian."""
             f_c = self.parent.f_c
@@ -442,7 +90,7 @@ class MatCSCM:
                     return 1.2317E+01 * pow(f_c, -1.5974E+00)
                 case _:
                     raise ValueError(f"Invalid revision number: {rev}")
-        
+            
         def theta(self, rev=Revision.REV_3):
             """Theta parameter for compression meridian."""
             f_c = self.parent.f_c
@@ -455,12 +103,7 @@ class MatCSCM:
                     return -3.4286E-06 * pow(f_c, 2) - 3.7971E-04 * f_c + 3.5436E-01
                 case _:
                     raise ValueError(f"Invalid revision number: {rev}")
-        
-        def TXC(self, I, rev=Revision.REV_3):
-            """Compression meridian."""
-            return self.F_f(I, rev)
-        
-        # Shear meridian (TOR) parameters
+            
         def alpha_1(self, rev=Revision.REV_3):
             """Alpha_1 parameter for shear meridian."""
             f_c = self.parent.f_c
@@ -473,7 +116,7 @@ class MatCSCM:
                     return 1 / np.sqrt(3.0) + self.lamda_1(rev)
                 case _:
                     raise ValueError(f"Invalid revision number: {rev}")
-        
+            
         def lamda_1(self, rev=Revision.REV_3):
             """Lambda_1 parameter for shear meridian."""
             f_c = self.parent.f_c
@@ -487,7 +130,7 @@ class MatCSCM:
                             2.3049E-03 * f_c + 2.8860E-01)
                 case _:
                     raise ValueError(f"Invalid revision number: {rev}")
-        
+            
         def beta_1(self, rev=Revision.REV_3):
             """Beta_1 parameter for shear meridian."""
             f_c = self.parent.f_c
@@ -500,7 +143,7 @@ class MatCSCM:
                     return 3.4093E-01 * pow(f_c, -9.4944E-01)
                 case _:
                     raise ValueError(f"Invalid revision number: {rev}")
-        
+            
         def theta_1(self, rev=Revision.REV_3):
             """Theta_1 parameter for shear meridian."""
             f_c = self.parent.f_c
@@ -512,32 +155,8 @@ class MatCSCM:
                 case Revision.REV_3:
                     return 0
                 case _:
-                    raise ValueError(f"Invalid revision number: {rev}")
+                    raise ValueError(f"Invalid revision number: {rev}")     
         
-        def Q_1(self, I, rev=Revision.REV_3):
-            """Q_1 strength ratio for shear meridian."""
-            f_c = self.parent.f_c
-            if not isinstance(I, np.ndarray):
-                I = np.array([I])
-            
-            for i, value in enumerate(I):
-                if value >= 0:
-                    # TOR/TXC strength ratio
-                    return (self.alpha_1(rev) - self.lamda_1(rev) * 
-                            np.exp(-self.beta_1(rev) * i) + self.theta_1(rev) * i)
-                else:
-                    # Values to simulate triangular yield surface in deviatoric plane for tensile pressure
-                    return 1 / np.sqrt(3.0)
-        
-        def TOR(self, I, rev=Revision.REV_3):
-            """Shear meridian."""
-            I_tension = I[I <= 0]
-            I_compression = I[I > 0]
-            result_negative = 1.0 / np.sqrt(3.0) * self.TXC(I_tension, rev)
-            result_compression = self.Q_1(I_compression, rev) * self.TXC(I_compression, rev)
-            return np.hstack((result_negative, result_compression))
-        
-        # Tensile meridian (TXE) parameters
         def alpha_2(self, rev=Revision.REV_3):
             """Alpha_2 parameter for tensile meridian."""
             f_c = self.parent.f_c
@@ -550,7 +169,7 @@ class MatCSCM:
                     return round(0.5 + self.lamda_2(rev), 4)
                 case _:
                     raise ValueError(f"Invalid revision number: {rev}")
-        
+            
         def lamda_2(self, rev=Revision.REV_3):
             """Lambda_2 parameter for tensile meridian."""
             f_c = self.parent.f_c
@@ -563,7 +182,7 @@ class MatCSCM:
                     return 3.0029E-01 * pow(f_c, -4.2269E-02)
                 case _:
                     raise ValueError(f"Invalid revision number: {rev}")
-        
+            
         def beta_2(self, rev=Revision.REV_3):
             """Beta_2 parameter for tensile meridian."""
             f_c = self.parent.f_c
@@ -576,7 +195,7 @@ class MatCSCM:
                     return 2.8898E-01 * pow(f_c, -9.4776E-01)
                 case _:
                     raise ValueError(f"Invalid revision number: {rev}")
-        
+            
         def theta_2(self, rev=Revision.REV_3):
             """Theta_2 parameter for tensile meridian."""
             f_c = self.parent.f_c
@@ -589,36 +208,272 @@ class MatCSCM:
                     return 0
                 case _:
                     raise ValueError(f"Invalid revision number: {rev}")
+
+        def kappa_0(self, rev=Revision.REV_3):
+            """Initial location of the cap when kappa = kappa_0."""
+            f_c = self.parent.f_c
+            match rev:
+                case Revision.REV_1:
+                    return self.parent.initialize.P(8.769178e-03, -7.3302306e-02, 84.85)
+                case Revision.REV_2:
+                    return 17.087 + 1.892 * f_c
+                case Revision.REV_3:
+                    return 4.0224E+00 * f_c - 7.0784E+01
+                case _:
+                    raise ValueError(f"Invalid revision number: {rev}")
+            
+        def R(self, rev=Revision.REV_3):
+            """Ellipticity ratio - ratio of major to minor ellipse axes."""
+            f_c = self.parent.f_c
+            match rev:
+                case Revision.REV_1:
+                    return 5
+                case Revision.REV_2:
+                    return 4.45994 * np.exp(-f_c / 11.51679) + 1.95358
+                case Revision.REV_3:
+                    return 5.0000E-04 * pow(f_c, 2) - 5.9000E-02 * f_c + 3.6600E+00
+                case _:
+                    raise ValueError(f"Invalid revision number: {rev}")
+            
+        def W(self, rev=Revision.REV_3):
+            """Maximum plastic volume strain."""
+            match rev:
+                case Revision.REV_1:
+                    return 0.05
+                case Revision.REV_2:
+                    return 0.065
+                case Revision.REV_3:
+                    return 0.065
+                case _:
+                    raise ValueError(f"Invalid revision number: {rev}")
+            
+        def D_1(self, rev=Revision.REV_3):
+            """D_1 parameter for cap surface."""
+            match rev:
+                case Revision.REV_1:
+                    return 2.5E-4
+                case Revision.REV_2:
+                    return 6.11e-4
+                case Revision.REV_3:
+                    return 6.11e-4
+                case _:
+                    raise ValueError(f"Invalid revision number: {rev}")
+            
+        def D_2(self, rev=Revision.REV_3):
+            """D_2 parameter for cap surface."""
+            match rev:
+                case Revision.REV_1:
+                    return 3.49E-7
+                case Revision.REV_2:
+                    return 2.225E-6
+                case Revision.REV_3:
+                    return 2.225E-6
+                case _:
+                    raise ValueError(f"Invalid revision number: {rev}")
+
+            
+        def B(self, rev=Revision.REV_1):
+            """Ductile shape softening parameter."""
+            f_c = self.parent.f_c
+            E = self.parent.ceb_data.E
+            G_f_c = self.parent.ceb_data.G_fc
+            l = self.parent.esize
+            
+            match rev:
+                case Revision.REV_1:
+                    return 100
+                case Revision.REV_2:
+                    bfit = 2.0 * G_f_c / l
+                    bfit += f_c * 2 / E
+                    bfit = pow(bfit, 0.5)
+                    bfit += f_c / pow(E, 0.5)
+                    bfit /= G_f_c / l
+                    return bfit
+                case _:
+                    raise ValueError(f"Invalid revision number: {rev}")
+            
+        def D(self, rev=Revision.REV_1):
+            """Brittle shape softening parameter."""
+            f_t = self.parent.ceb_data.f_t
+            E = self.parent.ceb_data.E
+            G_ft = self.parent.ceb_data.G_ft
+            l = self.parent.esize
+            
+            match rev:
+                case Revision.REV_1:
+                    return 0.1
+                case Revision.REV_2:
+                    return l * f_t / (G_ft * pow(E, 0.5))
+                case _:
+                    raise ValueError(f"Invalid revision number: {rev}")
+            
+        def pmod(self):
+            """Moderate pressure softening parameter. """
+            return 0.0
+            
+        def brittle_damage(self, tau_b, D, C, d_max, r_0b):
+            """Calculate brittle damage."""
+            d = (1 + D)
+            d /= (1 + D * np.exp(-C * (tau_b - r_0b)))
+            d -= 1
+            d *= d_max / D
+            return d
+            
+        def ductile_damage(self, tau_d, B, a, d_max, r_0d):
+            """Calculate ductile damage."""
+            d = (1 + B)
+            d /= (1 + B * np.exp(-a * (tau_d - r_0d)))
+            d -= 1
+            d *= d_max / B
+            return d
         
-        def Q_2(self, I, rev=Revision.REV_3):
+            
+        def n_t(self, rev=Revision.REV_1):
+            """n_t parameter for tensile strain rate."""
+            match rev:
+                case Revision.REV_1:
+                    return 0.48
+                case Revision.REV_2:
+                    return 0
+                case _:
+                    raise ValueError(f"Invalid revision number: {rev}")
+            
+        def eta_0_t(self, rev=Revision.REV_1):
+            """eta_0_t parameter for tensile strain rate."""
+            f_c = self.parent.f_c
+            f_c_in_psi = f_c * 145.0377
+            match rev:
+                case Revision.REV_1:
+                    return self.parent.initialize.P(8.0614774E-13, -9.77736719E-10, 5.0752351E-05)
+                case Revision.REV_2:
+                    return 0
+                case _:
+                    raise ValueError(f"Invalid revision number: {rev}")
+            
+        def eta_t(self, strain_rate, rev=Revision.REV_1):
+            """Fluidity parameter in uniaxial tensile stress."""
+            return self.eta_0_t(rev) / pow(strain_rate, self.n_t(rev))
+            
+        def n_c(self, rev=Revision.REV_1):
+            """n_c parameter for compressive strain rate."""
+            match rev:
+                case Revision.REV_1:
+                    return 0.78
+                case Revision.REV_2:
+                    return 0
+                case _:
+                    raise ValueError(f"Invalid revision number: {rev}")
+            
+        def eta_0_c(self, rev=Revision.REV_1):
+            """eta_0_c parameter for compressive strain rate."""
+            f_c = self.parent.f_c
+            f_c_in_psi = f_c * 145.0377
+            match rev:
+                case Revision.REV_1:
+                    return self.parent.initialize.P(1.2772337E-11, -1.0613722E-07, 3.203497E-4)
+                case Revision.REV_2:
+                    return 0
+                case _:
+                    raise ValueError(f"Invalid revision number: {rev}")
+            
+        def eta_c(self, strain_rate, rev=Revision.REV_1):
+            """Fluidity parameter in uniaxial compressive stress."""
+            return self.eta_0_c(rev) / pow(strain_rate, self.n_c(rev))
+            
+        def eta_s(self, strain_rate, rev=Revision.REV_1):
+            """Fluidity parameter in shear stress."""
+            return self.Srate(rev) * self.eta_t(strain_rate, rev)
+            
+        def Srate(self, rev=Revision.REV_1):
+            """Ratio of effective shear stress to tensile stress fluidity parameters."""
+            return 1.0
+            
+        def overt(self, rev=Revision.REV_1):
+            """Over-stress limit for tension."""
+            f_c = self.parent.f_c
+            return self.parent.initialize.P(1.309663E-02, -0.3927659, 21.45)
+            
+        def overc(self, rev=Revision.REV_1):
+            """Over-stress limit for compression."""
+            return self.overt(rev)
+            
+        def TXC(self, I_1, rev=Revision.REV_3):
+            """Compression meridian strength (alias for F_f)."""
+            f_c = self.parent.f_c
+            alpha = self.alpha(rev)
+            result = alpha
+            result -= self.lamda(rev) * np.exp(-self.beta(rev) * I_1)
+            result += self.theta(rev) * I_1
+            return result * f_c
+    class Evaluate:
+        def __init__(self, parent):
+            self.parent = parent
+
+        def F_f(self, I_1, rev=Revision.REV_3):
+            """ Shear surface F_f defined along the compression meridian TXC."""
+            f_c = self.parent.f_c
+            alpha = self.parent.initialize.alpha(rev)
+            result = alpha
+            result -= self.parent.initialize.lamda(rev) * np.exp(-self.parent.initialize.beta(rev) * I_1)
+            result += self.parent.initialize.theta(rev) * I_1
+            return result
+        
+        def Q_1(self, I_1, rev=Revision.REV_3):
+            """Q_1 strength ratio for shear meridian."""
+            f_c = self.parent.f_c
+            if not isinstance(I_1, np.ndarray):
+                I_1 = np.array([I_1])
+            
+            for i, value in enumerate(I_1):
+                if value >= 0:
+                    # TOR/TXC strength ratio
+                    return (self.parent.initialize.alpha_1(rev) - self.parent.initialize.lamda_1(rev) * 
+                            np.exp(-self.parent.initialize.beta_1(rev) * i) + self.parent.initialize.theta_1(rev) * i)
+                else:
+                    # Values to simulate triangular yield surface in deviatoric plane for tensile pressure
+                    return 1 / np.sqrt(3.0)
+        
+        def TOR(self, I_1, rev=Revision.REV_3):
+            """Shear meridian."""
+            I_tension = I_1[I_1 <= 0]
+            I_compression = I_1[I_1 > 0]
+            result_negative = 1.0 / np.sqrt(3.0) * self.F_c(I_tension, rev)
+            result_compression = self.Q_1(I_compression, rev) * self.F_c(I_compression, rev)
+            return np.hstack((result_negative, result_compression))
+
+        def Q_2(self, I_1, rev=Revision.REV_3):
             """Q_2 strength ratio for tensile meridian."""
             f_c = self.parent.f_c
-            if not isinstance(I, np.ndarray):
-                I = np.array([I])
+            if not isinstance(I_1, np.ndarray):
+                I = np.array([I_1])
             
-            for i, value in enumerate(I):
+            for i, value in enumerate(I_1):
                 if i >= 0:
                     # TXE/TXC strength ratio
-                    return (self.alpha_2(rev) - self.lamda_2(rev) * 
-                            np.exp(-self.beta_2(rev) * i) + self.theta_2(rev) * i)
+                    return (self.parent.initialize.alpha_2(rev) - self.parent.initialize.lamda_2(rev) * 
+                            np.exp(-self.parent.initialize.beta_2(rev) * i) + self.parent.initialize.theta_2(rev) * i)
                 else:
                     # Values to simulate triangular yield surface in deviatoric plane for tensile pressure
                     return 0.5
-        
-        def TXE(self, I, rev=Revision.REV_3):
+        def TXE(self, I_1, rev=Revision.REV_3):
             """Tensile meridian."""
-            I_tension = I[I <= 0]
-            I_compression = I[I > 0]
-            result_negative = 0.5 * self.TXC(I_tension, rev)
-            result_compression = self.Q_2(I_compression, rev) * self.TXC(I_compression, rev)
+            I_tension = I_1[I_1 <= 0]
+            I_compression = I_1[I_1 > 0]
+            # For tension region, use a simplified approach
+            result_negative = np.full_like(I_tension, 0.5)
+            # For compression region, use Q_2 ratio with F_f
+            if len(I_compression) > 0:
+                result_compression = self.Q_2(I_compression, rev) * self.F_f(I_compression, rev)
+            else:
+                result_compression = np.array([])
             return np.hstack((result_negative, result_compression))
         
-        def Rubin(self, I, rev=Revision.REV_3, resolution=30):
+        def Rubin(self, I_1, rev=Revision.REV_3, resolution=30):
             """Rubin yield surface calculation."""
             beta_hat = np.linspace(-np.pi / 6.0, np.pi, resolution)
             
-            q1 = self.Q_1(I, rev)
-            q2 = self.Q_2(I, rev)
+            q1 = self.Q_1(I_1, rev)
+            q2 = self.Q_2(I_1, rev)
             
             a_0 = 2 * pow(q1, 2) * (q2 - 1)
             a_1 = np.sqrt(3) * q2 + 2 * q1 * (q2 - 1)
@@ -635,32 +490,11 @@ class MatCSCM:
             RCurve = np.vstack((beta_hat, RScale))
             return RCurve
         
-        def f(self, I_1, J_2, kappa, kappa_0, rev=Revision.REV_3):
-            """
-            General yield function f = F_f(I_1) * F_c(I_1, J_2, kappa) - kappa.
+        def f(self, I_1, J_2, kappa, rev=Revision.REV_3):
+            """General yield function f = F_f(I_1) * F_c(I_1, J_2, kappa) - kappa."""
+            # Get kappa_0 from parent object
+            kappa_0 = self.parent.initialize.kappa_0(rev)
             
-            This function combines the shear failure surface F_f and the cap 
-            failure surface F_c to define the overall yield criterion for the 
-            CSCM model.
-            
-            Parameters:
-            -----------
-            I_1 : array_like
-                First stress invariant (I1)
-            J_2 : array_like
-                Second stress invariant (J2)
-            kappa : array_like
-                Hardening parameter that controls cap expansion/contraction
-            kappa_0 : float
-                Initial value of kappa at the intersection of cap and shear surfaces
-            rev : Revision
-                Revision number (REV_1, REV_2, or REV_3)
-                
-            Returns:
-            --------
-            array_like
-                Yield function value. f < 0: elastic, f = 0: yield, f > 0: inadmissible
-            """
             # Calculate shear failure surface F_f(I_1)
             F_f_value = self.F_f(I_1, rev)
             
@@ -672,85 +506,8 @@ class MatCSCM:
             yield_function = F_f_value * F_c_value - kappa
             
             return yield_function
-    
-    
-    class CapSurface:
-        """Cap surface calculations for CSCM model."""
-        
-        def __init__(self, parent):
-            self.parent = parent
-        
-        def kappa_0(self, rev=Revision.REV_3):
-            """Initial location of the cap when kappa = kappa_0."""
-            f_c = self.parent.f_c
-            match rev:
-                case Revision.REV_1:
-                    return self.parent.yield_surface.P(8.769178e-03, -7.3302306e-02, 84.85)
-                case Revision.REV_2:
-                    return 17.087 + 1.892 * f_c
-                case Revision.REV_3:
-                    return 4.0224E+00 * f_c - 7.0784E+01
-                case _:
-                    raise ValueError(f"Invalid revision number: {rev}")
-        
-        def R(self, rev=Revision.REV_3):
-            """Ellipticity ratio - ratio of major to minor ellipse axes."""
-            f_c = self.parent.f_c
-            match rev:
-                case Revision.REV_1:
-                    return 5
-                case Revision.REV_2:
-                    return 4.45994 * np.exp(-f_c / 11.51679) + 1.95358
-                case Revision.REV_3:
-                    return 5.0000E-04 * pow(f_c, 2) - 5.9000E-02 * f_c + 3.6600E+00
-                case _:
-                    raise ValueError(f"Invalid revision number: {rev}")
-        
-        def W(self, rev=Revision.REV_3):
-            """
-            Maximum plastic volume strain.
-            
-            The maximum plastic volume change sets the range in volumetric strain over 
-            which the pressure-volumetric strain curve is nonlinear (from onset to lock-up). 
-            Typically, the maximum plastic volume change is approximately equal 
-            to the porosity of the air voids. A value of 0.05 indicates an air void 
-            porosity of 5 percent.
-            """
-            match rev:
-                case Revision.REV_1:
-                    return 0.05
-                case Revision.REV_2:
-                    return 0.065
-                case Revision.REV_3:
-                    return 0.065
-                case _:
-                    raise ValueError(f"Invalid revision number: {rev}")
-        
-        def D_1(self, rev=Revision.REV_3):
-            """D_1 parameter for cap surface."""
-            match rev:
-                case Revision.REV_1:
-                    return 2.5E-4
-                case Revision.REV_2:
-                    return 6.11e-4
-                case Revision.REV_3:
-                    return 6.11e-4
-                case _:
-                    raise ValueError(f"Invalid revision number: {rev}")
-        
-        def D_2(self, rev=Revision.REV_3):
-            """D_2 parameter for cap surface."""
-            match rev:
-                case Revision.REV_1:
-                    return 3.49E-7
-                case Revision.REV_2:
-                    return 2.225E-6
-                case Revision.REV_3:
-                    return 2.225E-6
-                case _:
-                    raise ValueError(f"Invalid revision number: {rev}")
-        
-        def L(self, kappa, kappa_0):
+         
+        def L(self, kappa, rev=Revision.REV_2):
             """
             L(kappa) is the position on the I-axis where 
             the ellipse (cap surface) intersects 
@@ -760,43 +517,24 @@ class MatCSCM:
             of the cap and shear surfaces before hardening 
             is engaged (before the cap moves).
             """
+            # Get kappa_0 from parent object
+            kappa_0 = self.parent.initialize.kappa_0(rev)
+            
             # Handle both scalar and array inputs
             kappa = np.asarray(kappa)
             return np.maximum(kappa, kappa_0)
         
-        def X(self, I, kappa, kappa_0, rev=Revision.REV_3):
+        def X(self, I_1, kappa, rev=Revision.REV_3):
             """
             X(kappa) is the position on the I-axis where the outer
             edge of the ellipse (cap surface) intersects.
             """
-            return (self.L(kappa, kappa_0) + 
-                    self.R(rev) * self.parent.yield_surface.F_f(self.L(kappa, kappa_0), rev))
+            return (self.L(kappa, rev) + 
+                self.parent.initialize.R(rev) * self.F_f(self.L(kappa, rev), rev))
         
         def F_c(self, I_1, J_2, kappa, rev=Revision.REV_3):
-            """
-            Cap failure surface function F_c.
-            
-            The cap surface is an elliptical surface in the I_1-sqrt(J_2) space
-            that represents the yield surface for hydrostatic compression.
-            
-            Parameters:
-            -----------
-            I_1 : array_like
-                First stress invariant
-            J_2 : array_like
-                Second deviatoric stress invariant
-            kappa : array_like
-                Hardening parameter that causes the cap surface to move (expand or contract)
-            rev : Revision
-                Model revision
-                
-            Returns:
-            --------
-            array_like
-                Cap surface function value
-            """
-            kappa_0 = self.kappa_0(rev)
-            R = self.R(rev)
+            """ Cap failure surface function F_c. """
+            R = self.parent.initialize.R(rev)
             
             # Ensure inputs are arrays
             I_1 = np.asarray(I_1)
@@ -804,7 +542,7 @@ class MatCSCM:
             kappa = np.asarray(kappa)
             
             # Cap center position
-            L_kappa = self.L(kappa, kappa_0)
+            L_kappa = self.L(kappa, rev)
             
             # Elliptical cap surface equation:
             # F_c = 1 - [(I_1 - L)^2 + R^2 * J_2] / kappa^2
@@ -824,44 +562,26 @@ class MatCSCM:
             Plastic volume strain - basis for motion (expansion and contraction) of the cap.
             """
             return (self.W(rev) * 
-                    (1 - np.exp(-self.D_1(rev) * (X - self.kappa_0(rev)) - 
-                                self.D_2(rev) * pow(X - self.kappa_0(rev), 2))))
+                (1 - np.exp(-self.D_1(rev) * (X - self.kappa_0(rev)) - 
+                            self.D_2(rev) * pow(X - self.kappa_0(rev), 2))))
         
         def hydrostatic_compression_parameters(self, X, rev=Revision.REV_3):
             """Hydrostatic compression parameters."""
             return (self.D_1(rev) * (X - self.kappa_0(rev)) + 
-                    self.D_2(rev) * pow(X - self.kappa_0(rev), 2))
+                self.D_2(rev) * pow(X - self.kappa_0(rev), 2))
         
-        def kappa(self, delta_epsilon_p, epsilon_v_p_old, kappa_0, rev=Revision.REV_3):
+        def kappa(self, delta_epsilon_p, epsilon_v_p_old, rev=Revision.REV_3):
             """
             Calculate new kappa value based on plastic strain increment.
-            
-            This function implements the cap hardening algorithm that updates the 
-            position of the cap surface based on plastic volumetric strain evolution.
-            
-            Parameters:
-            -----------
-            delta_epsilon_p : float
-                Plastic strain increment
-            epsilon_v_p_old : float
-                Previous plastic volumetric strain
-            kappa_0 : float
-                Initial kappa value (cap cannot shrink below this value)
-            rev : Revision
-                Revision number (REV_1, REV_2, or REV_3)
-                
-            Returns:
-            --------
-            tuple
-                (kappa_new, epsilon_v_p_new) - Updated kappa and plastic volumetric strain
             """
             # Get material parameters
             nu = self.parent.ceb_data.nu  # Poisson's ratio
-            W = self.W(rev)                  # Maximum plastic volume strain
-            D1 = self.D_1(rev)              # D1 parameter
-            D2 = self.D_2(rev)              # D2 parameter
-            X0 = self.kappa_0(rev)          # Initial cap position
-            R = self.R(rev)                 # Ellipticity ratio
+            W = self.parent.initialize.W(rev)                  # Maximum plastic volume strain
+            D1 = self.parent.initialize.D_1(rev)              # D1 parameter
+            D2 = self.parent.initialize.D_2(rev)              # D2 parameter
+            X0 = self.parent.initialize.kappa_0(rev)          # Initial cap position
+            R = self.parent.initialize.R(rev)                 # Ellipticity ratio
+            kappa_0 = self.parent.initialize.kappa_0(rev)  # Get kappa_0 from parent
             
             # Step 1: Calculate plastic volumetric strain increment
             # Account for dilatancy during compression
@@ -884,197 +604,209 @@ class MatCSCM:
             kappa_new = max(kappa_new, kappa_0)
             
             return kappa_new, epsilon_v_p_new
-    
-    
-    class Damage:
-        """Damage calculations for CSCM model."""
         
-        def __init__(self, parent):
-            self.parent = parent
-        
-        def B(self, rev=Revision.REV_1):
-            """Ductile shape softening parameter."""
-            f_c = self.parent.f_c
-            E = self.parent.ceb_data.E
-            G_f_c = self.parent.ceb_data.G_fc
-            l = self.parent.esize
-            
-            match rev:
-                case Revision.REV_1:
-                    return 100
-                case Revision.REV_2:
-                    bfit = 2.0 * G_f_c / l
-                    bfit += f_c * 2 / E
-                    bfit = pow(bfit, 0.5)
-                    bfit += f_c / pow(E, 0.5)
-                    bfit /= G_f_c / l
-                    return bfit
-                case _:
-                    raise ValueError(f"Invalid revision number: {rev}")
-        
-        def D(self, rev=Revision.REV_1):
-            """Brittle shape softening parameter."""
-            f_t = self.parent.ceb_data.f_t
-            E = self.parent.ceb_data.E
-            G_ft = self.parent.ceb_data.G_ft
-            l = self.parent.esize
-            
-            match rev:
-                case Revision.REV_1:
-                    return 0.1
-                case Revision.REV_2:
-                    return l * f_t / (G_ft * pow(E, 0.5))
-                case _:
-                    raise ValueError(f"Invalid revision number: {rev}")
-        
-        def pmod(self):
+        def uniaxial_compression_response(self, max_strain=0.01, num_points=1000, dt=1e-5):
             """
-            Modify moderate pressure softening parameter.
+            Calculate stress-strain response for uniaxial compression using CSCM model.
             
-            In addition to reducing the maximum damage level with confinement (pressure), 
-            the compressive softening parameter, A, may also be reduced with confinement.
-            
-            A *= pow((d_max+0.001),pmod)
-            
-            Here pmod is a user-specified input parameter. Its default value is 0.0. 
-            Input compression value of pmod reduces A when the maximum damage is less than 0.999; 
-            otherwise A is unaffected by pmod. Thus, it is only active at moderate confinement levels.
+            Parameters:
+            -----------
+            max_strain : float
+                Maximum compression strain (positive value)
+            num_points : int
+                Number of calculation points
+            dt : float
+                Time step for strain rate calculation
+                
+            Returns:
+            --------
+            tuple
+                (strains, stresses) - arrays of strains and stresses
             """
-            return 0.0
-        
-        def brittle_damage(self, tau_b, D, C, d_max, r_0b):
-            """Calculate brittle damage."""
-            d = (1 + D)
-            d /= (1 + D * np.exp(-C * (tau_b - r_0b)))
-            d -= 1
-            d *= d_max / D
-            return d
-        
-        def ductile_damage(self, tau_d, B, a, d_max, r_0d):
-            """Calculate ductile damage."""
-            d = (1 + B)
-            d /= (1 + B * np.exp(-a * (tau_d - r_0d)))
-            d -= 1
-            d *= d_max / B
-            return d
-    
-    
-    class StrainRate:
-        """Strain rate effects for CSCM model."""
-        
-        def __init__(self, parent):
-            self.parent = parent
-        
-        def n_t(self, rev=Revision.REV_1):
-            """n_t parameter for tensile strain rate."""
-            match rev:
-                case Revision.REV_1:
-                    return 0.48
-                case Revision.REV_2:
-                    return 0
-                case _:
-                    raise ValueError(f"Invalid revision number: {rev}")
-        
-        def eta_0_t(self, rev=Revision.REV_1):
-            """eta_0_t parameter for tensile strain rate."""
-            f_c = self.parent.f_c
-            f_c_in_psi = f_c * 145.0377
-            match rev:
-                case Revision.REV_1:
-                    return self.parent.yield_surface.P(8.0614774E-13, -9.77736719E-10, 5.0752351E-05)
-                case Revision.REV_2:
-                    return 0
-                case _:
-                    raise ValueError(f"Invalid revision number: {rev}")
-        
-        def eta_t(self, strain_rate, rev=Revision.REV_1):
-            """Fluidity parameter in uniaxial tensile stress."""
-            return self.eta_0_t(rev) / pow(strain_rate, self.n_t(rev))
-        
-        def n_c(self, rev=Revision.REV_1):
-            """n_c parameter for compressive strain rate."""
-            match rev:
-                case Revision.REV_1:
-                    return 0.78
-                case Revision.REV_2:
-                    return 0
-                case _:
-                    raise ValueError(f"Invalid revision number: {rev}")
-        
-        def eta_0_c(self, rev=Revision.REV_1):
-            """eta_0_c parameter for compressive strain rate."""
-            f_c = self.parent.f_c
-            f_c_in_psi = f_c * 145.0377
-            match rev:
-                case Revision.REV_1:
-                    return self.parent.yield_surface.P(1.2772337E-11, -1.0613722E-07, 3.203497E-4)
-                case Revision.REV_2:
-                    return 0
-                case _:
-                    raise ValueError(f"Invalid revision number: {rev}")
-        
-        def eta_c(self, strain_rate, rev=Revision.REV_1):
-            """Fluidity parameter in uniaxial compressive stress."""
-            return self.eta_0_c(rev) / pow(strain_rate, self.n_c(rev))
-        
-        def eta_s(self, strain_rate, rev=Revision.REV_1):
-            """Fluidity parameter in shear stress."""
-            return self.Srate(rev) * self.eta_t(strain_rate, rev)
-        
-        def Srate(self, rev=Revision.REV_1):
-            """Ratio of effective shear stress to tensile stress fluidity parameters."""
-            return 1.0
-        
-        def overt(self, rev=Revision.REV_1):
-            """Over-stress limit for tension."""
-            f_c = self.parent.f_c
-            return self.parent.yield_surface.P(1.309663E-02, -0.3927659, 21.45)
-        
-        def overc(self, rev=Revision.REV_1):
-            """Over-stress limit for compression."""
-            return self.overt(rev)
-        
-        def DIF_CSCM_t(self, rev=Revision.REV_1, strain_rate_max=1000):
-            """Dynamic Increase Factor for tension."""
-            f_t = self.parent.ceb_data.f_t
-            E = self.parent.ceb_data.E
-            over_tension = self.overt(rev)
             
-            strain_rate_static = 30.0E-6
-            strain_rate = np.linspace(strain_rate_static, strain_rate_max, strain_rate_max)
+            # Get material parameters from CEB
+            ceb_data = self.parent.ceb_data
+            E = ceb_data.E          # Elastic modulus
+            nu = ceb_data.nu        # Poisson's ratio
+            f_c = ceb_data.f_c      # Compressive strength
+            f_t = ceb_data.f_t      # Tensile strength
             
-            inviscid_strengths = f_t
-            viscoplastic_strengths = E * strain_rate * self.eta_t(strain_rate, rev)
+            # Shear surface TXC parameters (REV_2)
+            alpha = self.parent.initialize.alpha(Revision.REV_2)
+            theta = self.parent.initialize.theta(Revision.REV_2)
+            lambda_param = self.parent.initialize.lamda(Revision.REV_2)
+            beta = self.parent.initialize.beta(Revision.REV_2)
             
-            for i, strengths in enumerate(viscoplastic_strengths):
-                if strengths > over_tension:
-                    viscoplastic_strengths[i] = over_tension
+            # Cap surface parameters (REV_2)
+            R = self.parent.initialize.R(Revision.REV_2)
+            kappa_0 = self.parent.initialize.kappa_0(Revision.REV_2)
+            W = self.parent.initialize.W(Revision.REV_2)
+            D1 = self.parent.initialize.D_1(Revision.REV_2)
+            D2 = self.parent.initialize.D_2(Revision.REV_2)
             
-            DIF = viscoplastic_strengths / inviscid_strengths + 1
-            DIF_curve = np.vstack((strain_rate, DIF))
-            return DIF_curve
-        
-        def DIF_CSCM_c(self, rev=Revision.REV_1, strain_rate_max=1000):
-            """Dynamic Increase Factor for compression."""
-            f_c = self.parent.f_c
-            E = self.parent.ceb_data.E
-            over_compression = self.overc(rev)
+            # Damage parameters
+            B = self.parent.initialize.B(Revision.REV_1)
+            G_fc = ceb_data.G_fc
             
-            strain_rate_static = 30.0E-6
-            strain_rate = np.linspace(strain_rate_static, strain_rate_max, strain_rate_max)
+            # Kinematic hardening parameters
+            NH = self.parent.nh if self.parent.nh > 0 else 0.7
+            CH = self.parent.ch if self.parent.ch > 0 else 0.01
             
-            inviscid_strengths = f_c
-            viscoplastic_strengths = E * strain_rate * self.eta_c(strain_rate, rev)
+            # Strain array
+            strains = np.linspace(0, max_strain, num_points)
+            stresses = np.zeros_like(strains)
             
-            for i, strengths in enumerate(viscoplastic_strengths):
-                if strengths > over_compression:
-                    viscoplastic_strengths[i] = over_compression
+            # State variables
+            kappa_0 = kappa_0
+            kappa = kappa_0
+            epsilon_v_p = 0.0
+            elastic_strain = 0.0
+            plastic_strain = 0.0
+            damage = 0.0
+            damage_threshold = 0.0
             
-            DIF = viscoplastic_strengths / inviscid_strengths + 1
-            DIF_curve = np.vstack((strain_rate, DIF))
-            return DIF_curve
-    
-    
+            # Initial damage threshold (energy at yield point)
+            damage_threshold_initial = (f_t**2) / (2 * E)  # For tension
+            damage_threshold_initial_c = (f_c**2) / (2 * E)  # For compression
+            
+            for i, total_strain in enumerate(strains):
+                # Step 1: Strain increment
+                if i == 0:
+                    d_strain = 0
+                else:
+                    d_strain = strains[i] - strains[i-1]
+                
+                elastic_strain += d_strain
+                
+                # Step 2: Trial elastic stress
+                sigma_trial = -E * elastic_strain  # Negative for compression
+                
+                # Step 3: Calculate stress invariants for uniaxial compression
+                I_1 = sigma_trial  # First invariant
+                J_2 = sigma_trial**2 / 3  # Second deviatoric invariant
+                
+                # Step 4: Calculate yield surfaces
+                # Shear surface F_f
+                F_f = self.F_f(I_1, Revision.REV_2)
+                
+                # Cap surface F_c
+                F_c = self.F_c(I_1, J_2, kappa, Revision.REV_2)
+                
+                # General yield function
+                f_yield = self.f(I_1, J_2, kappa, Revision.REV_2)
+                
+                # Step 5: Check elastic/plastic behavior
+                if f_yield <= 0:
+                    # Elastic behavior
+                    sigma = sigma_trial
+                    
+                else:
+                    # Plastic behavior
+                    
+                    # Kinematic hardening
+                    if abs(sigma_trial) > NH * f_c:
+                        hardening_factor = 1 - np.exp(-CH * plastic_strain * 100)
+                        effective_yield = f_c * (NH + (1 - NH) * hardening_factor)
+                    else:
+                        effective_yield = f_c * NH
+                    
+                    # Plastic correction
+                    if abs(sigma_trial) > effective_yield:
+                        sigma = -effective_yield  # Stress limitation
+                    
+                        # Plastic increment
+                        delta_epsilon_p = (abs(sigma_trial) - effective_yield) / E
+                        plastic_strain += delta_epsilon_p
+                        elastic_strain -= delta_epsilon_p
+                        
+                        # Update κ through cap surface
+                        try:
+                            kappa, epsilon_v_p = self.kappa(
+                                delta_epsilon_p, epsilon_v_p, Revision.REV_2
+                            )
+                        except:
+                            # Simplified κ update if method fails
+                            delta_epsilon_v_p = delta_epsilon_p * (1 - 2 * nu)
+                            epsilon_v_p += delta_epsilon_v_p
+                            epsilon_v_p_norm = abs(epsilon_v_p) / W
+                            exp_term = np.exp(-D1 * epsilon_v_p_norm - D2 * epsilon_v_p_norm**2)
+                            X_new = kappa_0 + epsilon_v_p_norm * (1 - exp_term)
+                            kappa = max((X_new + R**2 * kappa_0) / (1 + R**2), kappa_0)
+                    else:
+                        sigma = sigma_trial
+                
+                
+                # Step 7: Compression damage calculation (Ductile Damage)
+                strain_energy = abs(sigma * total_strain)
+                
+                if strain_energy > damage_threshold:
+                    damage_threshold = strain_energy
+                    
+                    # Calculate ductile damage
+                    tau_d = strain_energy
+                    r_0d = damage_threshold_initial_c
+                    
+                    if tau_d > r_0d:
+                        # Simplified damage formula
+                        d_max = 0.99
+                        tau_diff = tau_d - r_0d
+                        a = G_fc / (B + tau_diff) if (B + tau_diff) > 0 else 0.01
+                        
+                        try:
+                            damage_increment = self.parent.initialize.ductile_damage(tau_d, B, a, d_max, r_0d)
+                            damage = min(0.99, max(damage, damage_increment))
+                        except:
+                            # Simplified damage formula
+                            damage_increment = 1 - np.exp(-a * tau_diff / (B + tau_diff))
+                            damage = min(0.99, max(damage, damage_increment))
+                
+                # Step 8: Final stress with damage
+                sigma_final = sigma * (1 - damage)
+                stresses[i] = abs(sigma_final)  # Positive for plotting
+            
+            return strains, stresses
+
+        def plot_cscm_compression(self, max_strain=0.01, num_points=1000):
+            """
+            Plot stress-strain diagram for CSCM model under uniaxial compression.
+            
+            Parameters:
+            -----------
+            max_strain : float
+                Maximum strain
+            num_points : int
+                Number of calculation points
+                
+            Returns:
+            --------
+            matplotlib.pyplot
+                pyplot object for further customization
+            """
+            strains, stresses = self.uniaxial_compression_response(max_strain, num_points)
+            
+            plt.figure(figsize=(10, 6))
+            plt.plot(strains * 100, stresses, 'b-', linewidth=2, 
+                     label=f'CSCM Model (f\'c = {self.parent.f_c} MPa)')
+            
+            plt.xlabel('Compression Strain, %')
+            plt.ylabel('Compression Stress, MPa')
+            plt.title(f'CSCM Model under Uniaxial Compression\n(f\'c = {self.parent.f_c} MPa, d_max = {self.parent.dmax} mm)')
+            plt.grid(True, alpha=0.3)
+            plt.legend()
+            
+            # Add key points
+            peak_stress = np.max(stresses)
+            peak_strain = strains[np.argmax(stresses)] * 100
+            plt.plot(peak_strain, peak_stress, 'ro', markersize=8, 
+                     label=f'Peak: {peak_stress:.1f} MPa at {peak_strain:.3f}%')
+            
+            plt.xlim(0, max_strain * 100)
+            plt.ylim(0, peak_stress * 1.1)
+            plt.legend()
+            plt.tight_layout()
+            
+            return plt
+
     def generate_keyword(self):
         """
         Generate LS-DYNA material keyword for CSCM.
@@ -1107,34 +839,34 @@ class MatCSCM:
         # Card 3
         CSCM['G'] = {'card': 3, 'position': 1, 'type': 'F', 'value': data['G']}
         CSCM['K'] = {'card': 3, 'position': 2, 'type': 'F', 'value': data['K']}
-        CSCM['ALPHA'] = {'card': 3, 'position': 3, 'type': 'F', 'value': self.yield_surface.alpha(Revision.REV_2)}
-        CSCM['THETA'] = {'card': 3, 'position': 4, 'type': 'F', 'value': self.yield_surface.theta(Revision.REV_2)}
-        CSCM['LAMBDA'] = {'card': 3, 'position': 5, 'type': 'F', 'value': self.yield_surface.lamda(Revision.REV_2)}
-        CSCM['BETA'] = {'card': 3, 'position': 6, 'type': 'F', 'value': self.yield_surface.beta(Revision.REV_2)}
+        CSCM['ALPHA'] = {'card': 3, 'position': 3, 'type': 'F', 'value': self.initialize.alpha(Revision.REV_2)}
+        CSCM['THETA'] = {'card': 3, 'position': 4, 'type': 'F', 'value': self.initialize.theta(Revision.REV_2)}
+        CSCM['LAMBDA'] = {'card': 3, 'position': 5, 'type': 'F', 'value': self.initialize.lamda(Revision.REV_2)}
+        CSCM['BETA'] = {'card': 3, 'position': 6, 'type': 'F', 'value': self.initialize.beta(Revision.REV_2)}
         CSCM['NH'] = {'card': 3, 'position': 7, 'type': 'F', 'value': self.nh}
         CSCM['CH'] = {'card': 3, 'position': 8, 'type': 'F', 'value': self.ch}
         
         # Card 4
-        CSCM['ALPHA1'] = {'card': 4, 'position': 1, 'type': 'F', 'value': self.yield_surface.alpha_1(Revision.REV_2)}
-        CSCM['THETA1'] = {'card': 4, 'position': 2, 'type': 'F', 'value': self.yield_surface.theta_1(Revision.REV_2)}
-        CSCM['LAMBDA1'] = {'card': 4, 'position': 3, 'type': 'F', 'value': self.yield_surface.lamda_1(Revision.REV_2)}
-        CSCM['BETA1'] = {'card': 4, 'position': 4, 'type': 'F', 'value': self.yield_surface.beta_1(Revision.REV_2)}
-        CSCM['ALPHA2'] = {'card': 4, 'position': 5, 'type': 'F', 'value': self.yield_surface.alpha_2(Revision.REV_2)}
-        CSCM['THETA2'] = {'card': 4, 'position': 6, 'type': 'F', 'value': self.yield_surface.theta_2(Revision.REV_2)}
-        CSCM['LAMBDA2'] = {'card': 4, 'position': 7, 'type': 'F', 'value': self.yield_surface.lamda_2(Revision.REV_2)}
-        CSCM['BETA2'] = {'card': 4, 'position': 8, 'type': 'F', 'value': self.yield_surface.beta_2(Revision.REV_2)}
+        CSCM['ALPHA1'] = {'card': 4, 'position': 1, 'type': 'F', 'value': self.initialize.alpha_1(Revision.REV_2)}
+        CSCM['THETA1'] = {'card': 4, 'position': 2, 'type': 'F', 'value': self.initialize.theta_1(Revision.REV_2)}
+        CSCM['LAMBDA1'] = {'card': 4, 'position': 3, 'type': 'F', 'value': self.initialize.lamda_1(Revision.REV_2)}
+        CSCM['BETA1'] = {'card': 4, 'position': 4, 'type': 'F', 'value': self.initialize.beta_1(Revision.REV_2)}
+        CSCM['ALPHA2'] = {'card': 4, 'position': 5, 'type': 'F', 'value': self.initialize.alpha_2(Revision.REV_2)}
+        CSCM['THETA2'] = {'card': 4, 'position': 6, 'type': 'F', 'value': self.initialize.theta_2(Revision.REV_2)}
+        CSCM['LAMBDA2'] = {'card': 4, 'position': 7, 'type': 'F', 'value': self.initialize.lamda_2(Revision.REV_2)}
+        CSCM['BETA2'] = {'card': 4, 'position': 8, 'type': 'F', 'value': self.initialize.beta_2(Revision.REV_2)}
         
         # Card 5
-        CSCM['R'] = {'card': 5, 'position': 1, 'type': 'F', 'value': self.cap_surface.R(Revision.REV_2)}
-        CSCM['X0'] = {'card': 5, 'position': 2, 'type': 'F', 'value': self.cap_surface.kappa_0(Revision.REV_2)}
-        CSCM['W'] = {'card': 5, 'position': 3, 'type': 'F', 'value': self.cap_surface.W(Revision.REV_2)}
-        CSCM['D1'] = {'card': 5, 'position': 4, 'type': 'F', 'value': self.cap_surface.D_1(Revision.REV_2)}
-        CSCM['D2'] = {'card': 5, 'position': 5, 'type': 'F', 'value': self.cap_surface.D_2(Revision.REV_2)}
+        CSCM['R'] = {'card': 5, 'position': 1, 'type': 'F', 'value': self.initialize.R(Revision.REV_2)}
+        CSCM['X0'] = {'card': 5, 'position': 2, 'type': 'F', 'value': self.initialize.kappa_0(Revision.REV_2)}
+        CSCM['W'] = {'card': 5, 'position': 3, 'type': 'F', 'value': self.initialize.W(Revision.REV_2)}
+        CSCM['D1'] = {'card': 5, 'position': 4, 'type': 'F', 'value': self.initialize.D_1(Revision.REV_2)}
+        CSCM['D2'] = {'card': 5, 'position': 5, 'type': 'F', 'value': self.initialize.D_2(Revision.REV_2)}
         
         # Card 6
-        CSCM['B'] = {'card': 6, 'position': 1, 'type': 'F', 'value': self.damage.B(Revision.REV_1)}
+        CSCM['B'] = {'card': 6, 'position': 1, 'type': 'F', 'value': self.initialize.B(Revision.REV_1)}
         CSCM['GFC'] = {'card': 6, 'position': 2, 'type': 'F', 'value': data['G_fc']}
-        CSCM['D'] = {'card': 6, 'position': 3, 'type': 'F', 'value': self.damage.D(Revision.REV_1)}
+        CSCM['D'] = {'card': 6, 'position': 3, 'type': 'F', 'value': self.initialize.D(Revision.REV_1)}
         CSCM['GFT'] = {'card': 6, 'position': 4, 'type': 'F', 'value': data['G_ft']}
         CSCM['GFS'] = {'card': 6, 'position': 5, 'type': 'F', 'value': data['G_fs']}
         CSCM['PWRC'] = {'card': 6, 'position': 6, 'type': 'F', 'value': self.pwrc}
@@ -1142,13 +874,13 @@ class MatCSCM:
         CSCM['PMOD'] = {'card': 6, 'position': 8, 'type': 'F', 'value': self.pmod}
         
         # Card 7
-        CSCM['ETA_0_C'] = {'card': 7, 'position': 1, 'type': 'F', 'value': self.strain_rate.eta_0_c(Revision.REV_1)}
-        CSCM['N_C'] = {'card': 7, 'position': 2, 'type': 'F', 'value': self.strain_rate.n_c(Revision.REV_1)}
-        CSCM['ETA_0_T'] = {'card': 7, 'position': 3, 'type': 'F', 'value': self.strain_rate.eta_0_t(Revision.REV_1)}
-        CSCM['N_T'] = {'card': 7, 'position': 4, 'type': 'F', 'value': self.strain_rate.n_t(Revision.REV_1)}
-        CSCM['OVERC'] = {'card': 7, 'position': 5, 'type': 'F', 'value': self.strain_rate.overc(Revision.REV_1)}
-        CSCM['OVERT'] = {'card': 7, 'position': 6, 'type': 'F', 'value': self.strain_rate.overt(Revision.REV_1)}
-        CSCM['SRATE'] = {'card': 7, 'position': 7, 'type': 'F', 'value': self.strain_rate.Srate(Revision.REV_1)}
+        CSCM['ETA_0_C'] = {'card': 7, 'position': 1, 'type': 'F', 'value': self.initialize.eta_0_c(Revision.REV_1)}
+        CSCM['N_C'] = {'card': 7, 'position': 2, 'type': 'F', 'value': self.initialize.n_c(Revision.REV_1)}
+        CSCM['ETA_0_T'] = {'card': 7, 'position': 3, 'type': 'F', 'value': self.initialize.eta_0_t(Revision.REV_1)}
+        CSCM['N_T'] = {'card': 7, 'position': 4, 'type': 'F', 'value': self.initialize.n_t(Revision.REV_1)}
+        CSCM['OVERC'] = {'card': 7, 'position': 5, 'type': 'F', 'value': self.initialize.overc(Revision.REV_1)}
+        CSCM['OVERT'] = {'card': 7, 'position': 6, 'type': 'F', 'value': self.initialize.overt(Revision.REV_1)}
+        CSCM['SRATE'] = {'card': 7, 'position': 7, 'type': 'F', 'value': self.initialize.Srate(Revision.REV_1)}
         CSCM['REPOW'] = {'card': 7, 'position': 8, 'type': 'F', 'value': self.repow}
         
         return CSCM
@@ -1172,7 +904,7 @@ class MatCSCM:
                 text += '$# {0} = {1:G}\n'.format(key, items[key])
         text += '$#\n'
         return text
-
+    
 
 def keyword_to_text(data, word_length=10, word_number=8):
     """

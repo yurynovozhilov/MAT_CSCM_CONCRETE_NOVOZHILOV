@@ -73,16 +73,16 @@ def test_basic_functionality():
         mat_cscm = MatCSCM(f_c=f_c)
         
         # Test yield surface functions
-        alpha_val = mat_cscm.yield_surface.alpha(Revision.REV_3)
-        lambda_val = mat_cscm.yield_surface.lamda(Revision.REV_3)
+        alpha_val = mat_cscm.initialize.alpha(Revision.REV_3)
+        lambda_val = mat_cscm.initialize.lamda(Revision.REV_3)
         print(f"✅ MatCSCM yield surface: alpha={alpha_val:.2f}, lambda={lambda_val:.2f}")
         
         # Test functions with arrays
         I = np.array([0, 10, 20])
-        q2_vals = mat_cscm.yield_surface.Q_2(I, rev=Revision.REV_1)
-        txc_vals = mat_cscm.yield_surface.TXC(I, rev=Revision.REV_1)
-        txe_vals = mat_cscm.yield_surface.TXE(I, rev=Revision.REV_1)
-        print(f"✅ Array functions: Q_2 shape={q2_vals.shape}")
+        q2_vals = mat_cscm.evaluate.Q_2(I, rev=Revision.REV_1)
+        txc_vals = mat_cscm.initialize.TXC(I, rev=Revision.REV_1)
+        txe_vals = mat_cscm.evaluate.TXE(I, rev=Revision.REV_1)
+        print(f"✅ Array functions: Q_2 shape={q2_vals.shape}, TXC shape={txc_vals.shape}")
         
         # Test keyword generation
         cscm_data = mat_cscm.generate_keyword()
